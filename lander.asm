@@ -266,55 +266,55 @@ eraseLEM
 drawLEM         ;; on zx81 with blcok characters the LEM is a 3 by 3 grid, the hash defines are for each character 0 1 2 etc
                 ;; we could, and maybe will, just deine these in a small memory block and effectively do a mem copy
 #define LEM_0   6
-#define LEM_1   3       ; roof
+#define LEM_1   10       ; roof
 #define LEM_2   134
 
-#define LEM_3_THR_OFF   136
+#define LEM_3_THR_OFF   144
 #define LEM_4   8
-#define LEM_5_THR_OFF  136
+#define LEM_5_THR_OFF  145
 
 #define LEM_3_THR_ON   18
 #define LEM_4   8
 #define LEM_5_THR_ON  19
 
-#define LEM_6   135       ;; lander left leg
+#define LEM_6   6       ;; lander left leg
 #define LEM_7_E_OFF   3   ;; this is meant to be the descent engine when off
 #define LEM_7_E_ON   137   ;; this is meant to be the descent engine when on 
-#define LEM_8   132       ;; lander right leg
+#define LEM_8   134       ;; lander right leg
 
-    ld a, LEM_4
-    ld hl, (playerPosAbsolute)      ; playerPosAbsolute is the centre of the lander
-    ld (hl), a
-    push hl
-
-    ld a, LEM_3_THR_OFF
-    dec hl
-    ld (hl), a
-    pop hl
-    push hl
     
-    ld a, LEM_5_THR_OFF
-    inc hl
-    ld (hl), a
-    pop hl    
-    push hl
-    
-    
-    ld de, 33
-    sbc hl, de
-    ld a, LEM_1
-    ld (hl), a 
-    dec hl
+    ld hl, (playerPosAbsolute)      ; playerPosAbsolute is the top left of the lander    
     ld a, LEM_0
     ld (hl), a
-    inc hl 
+    inc hl
+    ld a, LEM_1
+    ld (hl), a   
     inc hl
     ld a, LEM_2
-    ld (hl), a    
+    ld (hl), a
     
+    ld hl, (playerPosAbsolute)      ; playerPosAbsolute is the centre of the lander    
+    ld de, $0021
+    add hl, de 
+    ld a, LEM_3_THR_OFF
+    ld (hl), a
+    inc hl
+    ld a, LEM_4    
+    ld (hl), a   
+    inc hl
+    ld a, LEM_5_THR_OFF
+    ld (hl), a      
     
-    pop hl
-    
+    ld de, $001f
+    add hl, de   
+    ld a, LEM_6
+    ld (hl), a
+    inc hl
+    ld a, LEM_7_E_OFF    
+    ld (hl), a   
+    inc hl
+    ld a, LEM_8
+    ld (hl), a  
     ret
 
 
