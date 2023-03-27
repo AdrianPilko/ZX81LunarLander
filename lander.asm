@@ -34,6 +34,23 @@
 #define RIGHT_THRUSTER 3
 #define GRAVITY 1
 
+#define LEM_0   6
+#define LEM_1   10       ; roof
+#define LEM_2   134
+
+#define LEM_3_THR_OFF   144
+#define LEM_4   8
+#define LEM_5_THR_OFF  145
+
+#define LEM_3_THR_ON   18
+#define LEM_4   8
+#define LEM_5_THR_ON  19
+
+#define LEM_6   6       ;; lander left leg
+#define LEM_7_E_OFF   3   ;; this is meant to be the descent engine when off
+#define LEM_7_E_ON   137   ;; this is meant to be the descent engine when on 
+#define LEM_8   134       ;; lander right leg
+
 ; character set definition/helpers
 __:				EQU	$00	;spacja
 _QT:			EQU	$0B	;"
@@ -156,17 +173,25 @@ initVariables
         
     xor a
     ld (firstTime), a
+    ld (y_vel), a    
+    ld (x_vel), a
+    ld a, 20
+    ld (altitude), a 
     
     ld a, (Score)
     dec a
-    daa
     ld (Score), a
+    ld a, 66
+    ld (agc_program), a
 
 
 gameLoop    
     ld a, (firstTime)
     cp 1
     jp z, firstTimeInit
+
+    ld d, NON_FIRED
+    ld e, 0
     
     ;; read keys
     ld a, KEYBOARD_READ_PORT_SHIFT_TO_V			
@@ -176,12 +201,12 @@ gameLoop
 
     ld a, KEYBOARD_READ_PORT_SPACE_TO_B			
     in a, (KEYBOARD_READ_PORT)					; read from io port		
-    bit 2, a						    ; M
+    bit 2, a						    ; N
     jp z, rightThruster							    ; jump to move shape right	
 
     ld a, KEYBOARD_READ_PORT_SPACE_TO_B			
     in a, (KEYBOARD_READ_PORT)					; read from io port		
-    bit 3, a					        ; N
+    bit 3, a					        ; M
     jp z, thrustMainEngine
     
     ld d, NON_FIRED
@@ -200,11 +225,16 @@ thrustMainEngine
     ld d,3    ; d storing the thrust 
     ld e,MAIN_ENGINE     ; e storing which engine or thruster
     jr updateStateAndDrawLEM
-    ;;;;;;;;; NO CODE SHOULD GO BETWEEN THIS AND  call updateLEMPhysicsState
+    ;;;;;;;;; NO CODE SHOULD GO BETWEEN THIS AND  call updateLEMPhysicsState unless push/pop de
     
-updateStateAndDrawLEM    
-    call updateLEMPhysicsState
+updateStateAndDrawLEM        
+    push de
+    call eraseLEM
+    pop de
+    call updateLEMPhysicsState    
     call drawLEM            
+    call updateAGC
+    
     
     call waitLoop
     jp gameLoop    
@@ -214,7 +244,7 @@ hitGroundGameOver
     ;ld hl, (playerPosAbsolute)
     ;ld (hl), a
 
-	ld bc,57
+	ld bc,34
 	ld de,youLostText    
     call printstring
     ld a, 1                 ;; reset score
@@ -238,7 +268,7 @@ playerWon
     ;ld hl, (playerPosAbsolute)
     ;ld (hl), a
 
-	ld bc,57
+	ld bc,34
 	ld de,youWonText
 	call printstring   
     
@@ -258,6 +288,13 @@ waitPlayerWon
 
 updateLEMPhysicsState
 
+    ;always add gravity
+    ld a, (y_vel) 
+    ld b, GRAVITY
+    add a, b   
+    ld (y_vel), a
+    ld (y_vel_disp), a
+    
                         ; d stores thruster, e stores the thrust to apply set by caller
     ld a, d
     cp MAIN_ENGINE
@@ -279,17 +316,27 @@ rightThrust
     ld (x_vel), a
 mainEngine
     ld a, (y_vel)
-    add a, e
+    sub e
     ld (y_vel), a
+    
+    ;;; DEBUG
+; debugHalt    
+;    ld hl, (DF_CC)
+;    inc hl    
+;    ld (hl), e
+;    inc hl
+;    inc hl
+;    ld (hl), d
+ ;   jp debugHalt    
     
 calculateNewPosition  
     ; always subtract the gravity until max v reached
-    ld a, (y_vel)
+    ;ld a, (x_vel)
     ;; need to check if a is > zero
-    ld b, 1
+    ;ld b, 1
     
-    add a, b
-    ld (y_vel), a
+    ;add b
+    ;ld (x_vel), a
     
     ;ld hl, (playerPosAbsolute)
     ;ld d, 0
@@ -314,12 +361,38 @@ addVertical
     ld a, (y_vel)  
     ld c, 0
 addVerticalLoop    
-    add hl, de    
+    push af
+    ld a, (altitude)
     dec a
+    daa
+    ld (altitude), a 
+    
+    ld a, (playerRowPosition)     
+    inc a
+    cp SCREEN_HEIGHT-1
+    jp z, checkVelXY
+    ld (playerRowPosition), a 
+    jr addNewVert
+checkVelXY
+    ;; TODO code to compare x and y velocity and if exceed threshold then game over else playerWon
+    ;;hitGroundGameOver    
+    jp playerWon
+addNewVert    
+    add hl, de    
+    pop af
+    dec a
+        ;;; DEBUG
+    push hl
+    ld hl, (DF_CC)
+    inc hl    
+    ld (hl), a
+    pop hl
+ 
     cp a
     jr nz,  addVerticalLoop
     
     ld (playerPosAbsolute), hl
+
     
 endOfUpdatePhysics
     ret
@@ -339,30 +412,44 @@ waitloop1
 
 
 eraseLEM
-;    ld a, SPACE_CHARACTER
-;    ld hl, (playerPosAbsolute)
-;    ld (hl), a
+    ld hl, (playerPosAbsolute)      ; playerPosAbsolute is the top left of the lander    
+    ld a, 0
+    ld (hl), a
+    inc hl
+    ld a, 0
+    ld (hl), a   
+    inc hl
+    ld a, 0
+    ld (hl), a
+    
+    ld hl, (playerPosAbsolute)      ; playerPosAbsolute is the centre of the lander    
+    ld de, $0021
+    add hl, de 
+    ld a, 0
+    ld (hl), a
+    inc hl
+    ld a, 0    
+    ld (hl), a   
+    inc hl
+    ld a, 0
+    ld (hl), a      
+    
+    ld de, $001f
+    add hl, de   
+    ld a, 0
+    ld (hl), a
+    inc hl
+    ld a, 0    
+    ld (hl), a   
+    inc hl
+    ld a, 0
+    ld (hl), a  
     
     ret
 
 drawLEM         ;; on zx81 with blcok characters the LEM is a 3 by 3 grid, the hash defines are for each character 0 1 2 etc
                 ;; we could, and maybe will, just deine these in a small memory block and effectively do a mem copy
-#define LEM_0   6
-#define LEM_1   10       ; roof
-#define LEM_2   134
 
-#define LEM_3_THR_OFF   144
-#define LEM_4   8
-#define LEM_5_THR_OFF  145
-
-#define LEM_3_THR_ON   18
-#define LEM_4   8
-#define LEM_5_THR_ON  19
-
-#define LEM_6   6       ;; lander left leg
-#define LEM_7_E_OFF   3   ;; this is meant to be the descent engine when off
-#define LEM_7_E_ON   137   ;; this is meant to be the descent engine when on 
-#define LEM_8   134       ;; lander right leg
 
     
     ld hl, (playerPosAbsolute)      ; playerPosAbsolute is the top left of the lander    
@@ -400,6 +487,77 @@ drawLEM         ;; on zx81 with blcok characters the LEM is a 3 by 3 grid, the h
     ret
 
 
+updateAGC
+
+    ld hl, (DF_CC)
+    ld de, 291
+    add hl, de  
+    
+    ld a, (y_vel_disp)    
+    push af ;store the original value of a for later
+    and $f0 ; isolate the first digit
+    rra
+    rra
+    rra
+    rra
+    add a,$1c ; add 28 to the character code
+    ld (hl), a
+    inc hl
+    pop af ; retrieve original value of a
+    and $0f ; isolate the second digit
+    add a,$1c ; add 28 to the character code
+    ld (hl), a 
+
+    ld de, 65
+    add hl, de
+    ld a, (altitude)    
+    push af ;store the original value of a for later
+    and $f0 ; isolate the first digit
+    rra
+    rra
+    rra
+    rra
+    add a,$1c ; add 28 to the character code
+    ld (hl), a
+    inc hl
+    pop af ; retrieve original value of a
+    and $0f ; isolate the second digit
+    add a,$1c ; add 28 to the character code
+    ld (hl), a     
+    
+    ld hl, (DF_CC)
+    ld de, 94
+    add hl, de
+    ld a, (agc_program)
+    push af ;store the original value of a for later
+    and $f0 ; isolate the first digit
+    rra
+    rra
+    rra
+    rra
+    add a,$1c ; add 28 to the character code
+    ld (hl), a
+    inc hl
+    pop af ; retrieve original value of a
+    and $0f ; isolate the second digit
+    add a,$1c ; add 28 to the character code
+    ld (hl), a         
+    
+    
+    ret
+
+convertToString_Unsigned8bit
+    ; convert an unsigned 8 bit number to base 10 string
+    ; input stored in a, output in tempStr
+    ; tempStr has a maximum length of 10 characters, plus a terminating $ff for use with printString    
+    ; for 8 bit the max value is obvious
+    
+    ;calc tens
+    ;ld b, 8
+    ;bit , a
+    ;jp z,
+    
+    ret
 
         
 ; this prints at to any offset (stored in bc) from the top of the screen Display, using string in de
@@ -454,7 +612,7 @@ Display        	DEFB $76                                                  ;agc
                 DEFB 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,0,0,0,0,0,0,0,0,0,133,$76;Line20
                 DEFB 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,0,0,0,0,0,0,0,0,0,133,$76;Line21
                 DEFB 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,0,0,0,0,0,0,0,0,0,133,$76;Line22
-                DEFB 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,130,131,131,131,131,131,131,131,131,131,129,$76;Line23
+                DEFB 128,129,131,131,136,136,138,136,128,128,136,8,8,8,8,130,130,130,129,130,129,130,131,131,131,131,131,131,131,131,131,129,$76;Line23
 
                                                                
 Variables:      
@@ -480,13 +638,19 @@ Score
 
 ;;;;; LEM state
 x_vel
-    DEFB 0
-pad1    
-    DEFB 0                
+    DEFB 0  
 y_vel
-    DEFB 0            
-pad2 
-    DEFB 0            
+    DEFB 0
+y_vel_disp
+    DEFB 0
+altitude
+    DEFB 0
+agc_program
+    DEFB 0
+
+;; for number conversion
+tempStr
+    DEFB 0,0,0,0,0,0,0,0,0,0,$ff
     
 VariablesEnd:   DEFB $80
 BasicEnd: 
