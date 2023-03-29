@@ -181,8 +181,14 @@ initVariables
     ld a, (Score)
     dec a
     ld (Score), a
-    ld a, 66
+    ld a, 102
     ld (agc_program), a
+    
+    ld a, 96
+    ld (agc_noun), a
+
+    ld a, 6
+    ld (agc_verb), a
 
 
 gameLoop    
@@ -192,6 +198,8 @@ gameLoop
 
     ld d, NON_FIRED
     ld e, 0
+
+    call eraseLEM
     
     ;; read keys
     ld a, KEYBOARD_READ_PORT_SHIFT_TO_V			
@@ -213,40 +221,60 @@ gameLoop
     ld e, 0
     jr updateStateAndDrawLEM
 
-leftThruster
-    ld d,1    ; d storing the thrust 
-    ld e,LEFT_THRUSTER     ; e storing which engine or thruster
+leftThruster            ; firing left thruster causes lem to move right
+    ld hl, (playerPosAbsolute)
+    inc hl
+    ld (playerPosAbsolute), hl
+    ld a, (x_vel)
+    dec a
+    ld (x_vel), a
     jr updateStateAndDrawLEM    
-rightThruster    
-    ld d,1    ; d storing the thrust 
-    ld e,RIGHT_THRUSTER     ; e storing which engine or thruster
+rightThruster    ; firing right thruster causes lem to move left
+    ld hl, (playerPosAbsolute)
+    dec hl
+    ld (playerPosAbsolute), hl
+    ld a, (x_vel)
+    inc a
+    ld (x_vel), a
     jr updateStateAndDrawLEM
-thrustMainEngine
-    ld d,3    ; d storing the thrust 
-    ld e,MAIN_ENGINE     ; e storing which engine or thruster
+thrustMainEngine    ; firing main engine causes lem to move up by two (but gravity brings down always by 1)
+    ld hl, (playerPosAbsolute)
+    ld de, 66
+    sbc hl, de
+    ld (playerPosAbsolute), hl
+    ld a, (y_vel)
+    sub e
+    ld (y_vel), a
+    ld a, (altitude)
+    inc a 
+    inc a
+    ld (altitude), a
     jr updateStateAndDrawLEM
     ;;;;;;;;; NO CODE SHOULD GO BETWEEN THIS AND  call updateLEMPhysicsState unless push/pop de
     
 updateStateAndDrawLEM        
-    push de
-    call eraseLEM
-    pop de
-    call updateLEMPhysicsState    
+    ;call updateLEMPhysicsState    
+    ;; simple physics to get a demo going is to always ad 33 for gravity of + one row    
+    ld hl, (playerPosAbsolute)
+    ld de, 33
+    add hl, de
+    ld (playerPosAbsolute), hl
+    ld a, (altitude)
+    dec a
+    ld (altitude), a
+    
     call drawLEM            
     call updateAGC
     
+    
+    ld a, (altitude)         
+    cp 2
+    jp z, playerWon
     
     call waitLoop
     jp gameLoop    
 
 hitGroundGameOver
-    ;ld a,       ; draw player one last time
-    ;ld hl, (playerPosAbsolute)
-    ;ld (hl), a
-
-	ld bc,34
-	ld de,youLostText    
-    call printstring
     ld a, 1                 ;; reset score
     ld (Score), a   
    
@@ -264,14 +292,7 @@ waitPlayerOver
     ;; never gets to here
    
 playerWon    
-    ;ld a, PLAYER_CHARACTER      ; draw player one last time
-    ;ld hl, (playerPosAbsolute)
-    ;ld (hl), a
-
-	ld bc,34
-	ld de,youWonText
-	call printstring   
-    
+   
 #ifdef RUN_ON_EMULATOR
     ld e, 20 
 #else
@@ -282,119 +303,14 @@ waitPlayerWon
     dec e
     jp nz, waitPlayerWon
     
+    call eraseLEM
     jp initVariables
+    
     ;; never gets to here
 
 
 updateLEMPhysicsState
-
-    ;always add gravity
-    ld a, (y_vel) 
-    ld b, GRAVITY
-    add a, b   
-    ld (y_vel), a
-    ld (y_vel_disp), a
-    
-                        ; d stores thruster, e stores the thrust to apply set by caller
-    ld a, d
-    cp MAIN_ENGINE
-    jp z, mainEngine    
-    ;cp LEFT_THRUSTER
-    ;jp z, leftThrust    
-    ;cp RIGHT_THRUSTER
-    ;jp z, rightThrust
-    ;cp NON_FIRED
-    jp calculateNewPosition  
-    
-leftThrust
-    ld a, (x_vel)
-    dec a
-    ld (x_vel), a
-rightThrust
-    ld a, (x_vel)
-    inc a
-    ld (x_vel), a
-mainEngine
-    ld a, (y_vel)
-    sub e
-    ld (y_vel), a
-    
-    ;;; DEBUG
-; debugHalt    
-;    ld hl, (DF_CC)
-;    inc hl    
-;    ld (hl), e
-;    inc hl
-;    inc hl
-;    ld (hl), d
- ;   jp debugHalt    
-    
-calculateNewPosition  
-    ; always subtract the gravity until max v reached
-    ;ld a, (x_vel)
-    ;; need to check if a is > zero
-    ;ld b, 1
-    
-    ;add b
-    ;ld (x_vel), a
-    
-    ;ld hl, (playerPosAbsolute)
-    ;ld d, 0
-    ;ld e, (x_vel)
-    ;ld a, 128
-    ;cp e
-    ;jp c, goingLeft
-    ;jp goingRight
-    jp addVertical
-    
-goingLeft    
-    sbc hl, de 
-    jp addVertical
-goingRight
-    add hl, de
-    jp addVertical
-    ld (playerPosAbsolute), hl
-        
-addVertical    
-    ld hl, (playerPosAbsolute)
-    ld de, $0021
-    ld a, (y_vel)  
-    ld c, 0
-addVerticalLoop    
-    push af
-    ld a, (altitude)
-    dec a
-    daa
-    ld (altitude), a 
-    
-    ld a, (playerRowPosition)     
-    inc a
-    cp SCREEN_HEIGHT-1
-    jp z, checkVelXY
-    ld (playerRowPosition), a 
-    jr addNewVert
-checkVelXY
-    ;; TODO code to compare x and y velocity and if exceed threshold then game over else playerWon
-    ;;hitGroundGameOver    
-    jp playerWon
-addNewVert    
-    add hl, de    
-    pop af
-    dec a
-        ;;; DEBUG
-    push hl
-    ld hl, (DF_CC)
-    inc hl    
-    ld (hl), a
-    pop hl
- 
-    cp a
-    jr nz,  addVerticalLoop
-    
-    ld (playerPosAbsolute), hl
-
-    
-endOfUpdatePhysics
+    ;todo   
     ret
     
 waitLoop
@@ -489,74 +405,53 @@ drawLEM         ;; on zx81 with blcok characters the LEM is a 3 by 3 grid, the h
 
 updateAGC
 
-    ld hl, (DF_CC)
-    ld de, 291
-    add hl, de  
-    
+    ld de, 291  
     ld a, (y_vel_disp)    
-    push af ;store the original value of a for later
-    and $f0 ; isolate the first digit
-    rra
-    rra
-    rra
-    rra
-    add a,$1c ; add 28 to the character code
-    ld (hl), a
-    inc hl
-    pop af ; retrieve original value of a
-    and $0f ; isolate the second digit
-    add a,$1c ; add 28 to the character code
-    ld (hl), a 
+    call print_number8bits
 
-    ld de, 65
-    add hl, de
+    ld de, 357
     ld a, (altitude)    
-    push af ;store the original value of a for later
-    and $f0 ; isolate the first digit
-    rra
-    rra
-    rra
-    rra
-    add a,$1c ; add 28 to the character code
-    ld (hl), a
-    inc hl
-    pop af ; retrieve original value of a
-    and $0f ; isolate the second digit
-    add a,$1c ; add 28 to the character code
-    ld (hl), a     
-    
-    ld hl, (DF_CC)
-    ld de, 94
-    add hl, de
-    ld a, (agc_program)
-    push af ;store the original value of a for later
-    and $f0 ; isolate the first digit
-    rra
-    rra
-    rra
-    rra
-    add a,$1c ; add 28 to the character code
-    ld (hl), a
-    inc hl
-    pop af ; retrieve original value of a
-    and $0f ; isolate the second digit
-    add a,$1c ; add 28 to the character code
-    ld (hl), a         
-    
-    
-    ret
+    call print_number8bits
 
-convertToString_Unsigned8bit
-    ; convert an unsigned 8 bit number to base 10 string
-    ; input stored in a, output in tempStr
-    ; tempStr has a maximum length of 10 characters, plus a terminating $ff for use with printString    
-    ; for 8 bit the max value is obvious
-    
-    ;calc tens
-    ;ld b, 8
-    ;bit , a
-    ;jp z,
-    
+    ; print the agc program
+    ld de, 94
+    ld a, (agc_program) ; stored as bcd, so 66 is 102 in decimal
+    call print_number8bits
+   
+    ;print the current verb and noun
+    ld de, 155
+    ld a, (agc_verb) ; stored as bcd
+    call print_number8bits    
+
+    ld de, 160
+    ld a, (agc_noun) ; stored as bcd
+    call print_number8bits    
+
+   
+    ; flash the COMP ACTY (Computer actvity) inverse video and back as in real agc
+    ld a, (compActyEvenOdd)
+    cp 1
+    jp z, inverseVideoPrintCA
+    ld a, 1
+    ld (compActyEvenOdd), a
+    ld bc,56
+    ld de, inverseVidStrCApt1
+    call printstring
+    ld bc,89
+    ld de, inverseVidStrCApt2
+    call printstring
+        
+    jp afterPrint
+inverseVideoPrintCA    
+    xor a
+    ld (compActyEvenOdd), a 
+    ld bc,56
+    ld de, noramlVidStrCApt1
+    call printstring
+    ld bc,89
+    ld de, noramlVidStrCApt2
+    call printstring            
+afterPrint    
     ret
 
         
@@ -574,6 +469,25 @@ printstring_loop
     jr printstring_loop
 printstring_end	
     ret  
+    
+print_number8bits
+    ld hl, (DF_CC)    
+    add hl, de    
+    push af ;store the original value of a for later
+    and $f0 ; isolate the first digit
+    rra
+    rra
+    rra
+    rra
+    add a,$1c ; add 28 to the character code
+    ld (hl), a
+    inc hl
+    pop af ; retrieve original value of a
+    and $0f ; isolate the second digit
+    add a,$1c ; add 28 to the character code
+    ld (hl), a  
+    
+    ret
 
     
                 DEFB $76                        ; Newline        
@@ -616,12 +530,14 @@ Display        	DEFB $76                                                  ;agc
 
                                                                
 Variables:      
-youWonText    
-    DEFB	_Y,_O,_U,__,_W,_O,_N,$ff
-youLostText    
-    DEFB	_Y,_O,_U,__,_L,_O,_S,_T,$ff
-blankText    
-    DEFB	__,__,__,__,__,__,__,__,$ff    
+inverseVidStrCApt1
+    DEFB	$a8,$b4,$b2,$b5,$ff    
+inverseVidStrCApt2
+    DEFB	$a6,$a8,$b9,$be,$ff        
+noramlVidStrCApt1
+    DEFB    $28,$34,$32,$35,$ff
+noramlVidStrCApt2
+    DEFB    $26,$28,$39,$3e,$ff
 tempChar
     DEFB 0
 playerPosAbsolute
@@ -647,7 +563,12 @@ altitude
     DEFB 0
 agc_program
     DEFB 0
-
+compActyEvenOdd
+    DEFB 0
+agc_noun
+    DEFB 0
+agc_verb   
+    DEFB 0   
 ;; for number conversion
 tempStr
     DEFB 0,0,0,0,0,0,0,0,0,0,$ff
