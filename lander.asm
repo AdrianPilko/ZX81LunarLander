@@ -173,6 +173,7 @@ initVariables
     ld (lemColPos), a
         
     xor a
+    ld (countSinceEngineOn), a
     ld (leftThrustOn), a
     ld (rightThrustOn), a
     ld (firstTime), a
@@ -259,19 +260,47 @@ rightThruster    ; firing right thruster causes lem to move left
     ld (x_vel), a
     jr updateStateAndDrawLEM
 thrustMainEngine    ; firing main engine causes lem to move up by two (but gravity brings down always by 1)
+    ; check fuel quanity remaining
+    ld a, (status_FuelQty)
+    cp 0
+    jp z, updateStateAndDrawLEM  ; if fuel run out then that's it only one way and that's down via gravity :)
+    
+    ld a, 1
+    ld (mainEngineOn), a
     call moveLemUp 
-    call moveLemUp 
+    call moveLemUp   
+    call moveLemUp
     ld a, (status_FuelQty)
     dec a
     daa
     ld (status_FuelQty), a
+    
+    ld a, (countSinceEngineOn)
+    cp 0
+    jp nz, resetCountSinceEngineOn
+    inc a
+    ld (countSinceEngineOn), a
     jr updateStateAndDrawLEM
+resetCountSinceEngineOn
+    ld a, 0 
+    ld (countSinceEngineOn), a
+    jr updateStateAndDrawLEM    
     ;;;;;;;;; NO CODE SHOULD GO BETWEEN THIS AND  call updateLEMPhysicsState unless push/pop de
     
 updateStateAndDrawLEM        
     ;call updateLEMPhysicsState    
-    ;; simple physics to get a demo going is to always ad 33 for gravity of + one row    
+    ;; simple physics to get a demo going is to always ad 33 for gravity of + one row        
+    ld a, (countSinceEngineOn)
+    ld b, a
+    inc b
+accelerateToGround        
     call moveLemDown
+    djnz accelerateToGround
+     
+    
+    ld a, (countSinceEngineOn)
+    inc a
+    ld (countSinceEngineOn), a
     
     call drawLEM            
     call updateAGC
@@ -279,10 +308,15 @@ updateStateAndDrawLEM
     xor a 
     ld (leftThrustOn), a
     ld (rightThrustOn), a
+    ld (mainEngineOn), a
     
     
     ld a, (altitude)         
     cp 2
+    jp z, playerWon
+    cp 1
+    jp z, playerWon
+    cp 0
     jp z, playerWon
     
     call waitLoop
@@ -329,7 +363,7 @@ updateLEMPhysicsState
     
 waitLoop
 #ifdef RUN_ON_EMULATOR
-    ld bc, $0fff     ; set wait loop delay for emulator
+    ld bc, $2fff     ; set wait loop delay for emulator
 #else
     ld bc, $0eff     ; set wait loop delay 
 #endif    
@@ -375,6 +409,14 @@ eraseLEM
     ld a, 0
     ld (hl), a  
     
+    ld a, (mainEngineOn)
+    cp 1
+    jp z, mainEngineNotOn
+    ld de, 32
+    add hl, de    
+    ld a, 0
+    ld (hl), a
+mainEngineNotOn    
     ret
 
 drawLEM         ;; on zx81 with blcok characters the LEM is a 3 by 3 grid, the hash defines are for each character 0 1 2 etc
@@ -419,7 +461,21 @@ rightThrustIsOn
     ld a, LEM_6
     ld (hl), a
     inc hl
+    
+    ld a, (mainEngineOn)
+    cp 0
     ld a, LEM_7_E_OFF    
+    jp z, mainEngineIsOn
+    push hl
+    ld de, 33
+    add hl, de    
+    ld a, 8
+    ld (hl), a
+    pop hl
+    
+    ld a, LEM_7_E_ON
+
+mainEngineIsOn         
     ld (hl), a   
     inc hl
     ld a, LEM_8
@@ -512,7 +568,7 @@ inverseVideoPrintCA
     call printstring       
 afterPrint    
 
-    ld de, 520
+    ld de, 485
     ld a, (status_FuelQty) ; stored as bcd
     call print_number8bits 
     ret
@@ -616,10 +672,13 @@ Score
 leftThrustOn    
     DEFB 0
 rightThrustOn    
-    DEFB 0 
+    DEFB 0
+mainEngineOn
+    DEFB 0
 status_FuelQty    
     DEFB 0
-
+countSinceEngineOn
+    DEFB 0
 ;;;;; LEM state
 x_vel
     DEFB 0  
