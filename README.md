@@ -7,3 +7,6 @@ Three phases of the NASA Apollo mission Landing are implemented:
 2) Approach - AGC program 64
 3) Terminal Descent - AGC program 66
 
+Game "cover art":
+![alt text](https://github.com/AdrianPilko/ZX81LunarLander/blob/46266776c010ecd957f4e578d01041e53b77325a/Project%20(20230326052226).jpg?raw=true
+
