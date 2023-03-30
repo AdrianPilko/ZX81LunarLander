@@ -173,6 +173,7 @@ initVariables
     ld (lemColPos), a
         
     xor a
+    ld (everyOther), a
     ld (countSinceEngineOn), a
     ld (leftThrustOn), a
     ld (rightThrustOn), a
@@ -226,7 +227,7 @@ gameLoop
     
     ld d, NON_FIRED
     ld e, 0
-    jr updateStateAndDrawLEM
+    jp updateStateAndDrawLEM
 
 leftThruster            ; firing left thruster causes lem to move right
     ld a, 1
@@ -278,9 +279,19 @@ thrustMainEngine    ; firing main engine causes lem to move up by two (but gravi
     ld a, (countSinceEngineOn)
     cp 0
     jp nz, resetCountSinceEngineOn
+    
+    ld a, (everyOther)
+    cp 3
+    jp z, zeroEveryOther
+    inc a
+    ld (everyOther), a
+    ld a, (countSinceEngineOn)    
     inc a
     ld (countSinceEngineOn), a
     jr updateStateAndDrawLEM
+zeroEveryOther
+    xor a
+    ld (everyOther), a
 resetCountSinceEngineOn
     ld a, 0 
     ld (countSinceEngineOn), a
@@ -309,22 +320,48 @@ accelerateToGround
     ld (leftThrustOn), a
     ld (rightThrustOn), a
     ld (mainEngineOn), a
-    
-    
+       
     ld a, (altitude)         
     cp 2
-    jp z, playerWon
+    jp z, checkCrash
     cp 1
-    jp z, playerWon
+    jp z, checkCrash
     cp 0
-    jp z, playerWon
+    jp z, checkCrash
     
+aftercheckCrash
     call waitLoop
     jp gameLoop    
+    
+checkCrash
+    ld a, (countSinceEngineOn)
+    cp 4
+    jp nc, hitGroundGameOver    
+    jp playerWon
 
 hitGroundGameOver
-    ld a, 1                 ;; reset score
-    ld (Score), a   
+    ld hl, (playerPosAbsolute)
+    ld a, 6
+    ld (hl), a
+    dec hl
+    ld (hl), a
+    inc hl
+    inc hl
+    ld (hl), a
+    inc hl
+    ld (hl), a
+    ld hl, (playerPosAbsolute)
+    ld de, 33
+    sbc hl, de
+    dec hl
+    ld (hl), a
+    dec hl
+    ld (hl), a
+    inc hl
+    inc hl
+    inc hl
+    ld (hl), a
+        
    
 #ifdef RUN_ON_EMULATOR
     ld e, 20 
@@ -520,9 +557,9 @@ endOfmoveLemDown
 
 updateAGC
 
-    ld de, 291  
-    ld a, (y_vel_disp)    
-    call print_number8bits
+    ;ld de, 291  
+    ;ld a, (y_vel_disp)    
+    ;call print_number8bits
 
     ld de, 357
     ld a, (altitude)    
@@ -570,6 +607,10 @@ afterPrint
 
     ld de, 485
     ld a, (status_FuelQty) ; stored as bcd
+    call print_number8bits 
+    
+    ld de, 291 
+    ld a, (countSinceEngineOn)
     call print_number8bits 
     ret
 
@@ -699,7 +740,8 @@ agc_verb
 ;; for number conversion
 tempStr
     DEFB 0,0,0,0,0,0,0,0,0,0,$ff
-    
+everyOther
+    DEFB 0
 VariablesEnd:   DEFB $80
 BasicEnd: 
 #END
