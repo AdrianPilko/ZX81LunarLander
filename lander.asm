@@ -189,11 +189,13 @@ initVariables
     
     ld a, 96
     ld (agc_noun), a
-
+    
     ld a, 6
     ld (agc_verb), a
-        
-
+    
+    ld a, 117
+    ld (status_FuelQty), a    
+    
 
 gameLoop    
     ld a, (firstTime)
@@ -259,6 +261,10 @@ rightThruster    ; firing right thruster causes lem to move left
 thrustMainEngine    ; firing main engine causes lem to move up by two (but gravity brings down always by 1)
     call moveLemUp 
     call moveLemUp 
+    ld a, (status_FuelQty)
+    dec a
+    daa
+    ld (status_FuelQty), a
     jr updateStateAndDrawLEM
     ;;;;;;;;; NO CODE SHOULD GO BETWEEN THIS AND  call updateLEMPhysicsState unless push/pop de
     
@@ -503,8 +509,12 @@ inverseVideoPrintCA
     call printstring
     ld bc,89
     ld de, noramlVidStrCApt2
-    call printstring            
+    call printstring       
 afterPrint    
+
+    ld de, 520
+    ld a, (status_FuelQty) ; stored as bcd
+    call print_number8bits 
     ret
 
         
@@ -569,8 +579,8 @@ Display        	DEFB $76                                                  ;agc
                 DEFB 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,0,21,_0,_0,_0,_0,_0,0,0,133,$76;Line10
                 DEFB 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,_BL,_BL,_BL,_BL,_BL,_BL,_BL,_BL,_BL,133,$76;Line11
                 DEFB 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,0,0,0,0,0,0,0,0,0,133,$76;Line12
-                DEFB 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,0,0,0,0,0,0,0,0,0,133,$76;Line13
-                DEFB 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,0,0,0,0,0,0,0,0,0,133,$76;Line14
+                DEFB 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,_F,_U,_E,_L,0,0,0,0,0,133,$76;Line13
+                DEFB 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,0,_X,_X,0,0,0,0,0,0,133,$76;Line14
                 DEFB 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,0,0,0,0,0,0,0,0,0,133,$76;Line15
                 DEFB 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,0,0,0,0,0,0,0,0,0,133,$76;Line16
                 DEFB 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,0,0,0,0,0,0,0,0,0,133,$76;Line17
@@ -606,7 +616,9 @@ Score
 leftThrustOn    
     DEFB 0
 rightThrustOn    
-    DEFB 0    
+    DEFB 0 
+status_FuelQty    
+    DEFB 0
 
 ;;;;; LEM state
 x_vel
