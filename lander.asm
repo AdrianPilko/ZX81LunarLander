@@ -167,12 +167,14 @@ initVariables
     call drawLEM
       
     ld a, 1
-    ld (playerRowPos), a
+    ld (lemRowPos), a
     inc a
     inc a
-    ld (playerColPos), a
+    ld (lemColPos), a
         
     xor a
+    ld (leftThrustOn), a
+    ld (rightThrustOn), a
     ld (firstTime), a
     ld (y_vel), a    
     ld (x_vel), a
@@ -190,6 +192,7 @@ initVariables
 
     ld a, 6
     ld (agc_verb), a
+        
 
 
 gameLoop    
@@ -206,12 +209,12 @@ gameLoop
     ld a, KEYBOARD_READ_PORT_SHIFT_TO_V			
     in a, (KEYBOARD_READ_PORT)					; read from io port	
     bit 1, a                            ; Z
-    jp z, leftThruster
+    jp z, rightThruster
 
     ld a, KEYBOARD_READ_PORT_SPACE_TO_B			
     in a, (KEYBOARD_READ_PORT)					; read from io port		
     bit 2, a						    ; N
-    jp z, rightThruster							    ; jump to move shape right	
+    jp z, leftThruster							    ; jump to move shape right	
 
     ld a, KEYBOARD_READ_PORT_SPACE_TO_B			
     in a, (KEYBOARD_READ_PORT)					; read from io port		
@@ -223,6 +226,13 @@ gameLoop
     jr updateStateAndDrawLEM
 
 leftThruster            ; firing left thruster causes lem to move right
+    ld a, 1
+    ld (leftThrustOn), a    
+    ld a, (lemColPos)    
+    cp 17
+    jp z, updateStateAndDrawLEM
+    inc a
+    ld (lemColPos), a
     ld hl, (playerPosAbsolute)
     inc hl
     ld (playerPosAbsolute), hl
@@ -231,7 +241,15 @@ leftThruster            ; firing left thruster causes lem to move right
     ld (x_vel), a
     jr updateStateAndDrawLEM    
 rightThruster    ; firing right thruster causes lem to move left
-    ld hl, (playerPosAbsolute)
+    ld a, 1
+    ld (rightThrustOn), a
+    
+    ld a, (lemColPos)    
+    cp 0
+    jp z, updateStateAndDrawLEM 
+    dec a
+    ld (lemColPos), a
+    ld hl, (playerPosAbsolute)    
     dec hl
     ld (playerPosAbsolute), hl
     ld a, (x_vel)
@@ -251,6 +269,10 @@ updateStateAndDrawLEM
     
     call drawLEM            
     call updateAGC
+    
+    xor a 
+    ld (leftThrustOn), a
+    ld (rightThrustOn), a
     
     
     ld a, (altitude)         
@@ -301,7 +323,7 @@ updateLEMPhysicsState
     
 waitLoop
 #ifdef RUN_ON_EMULATOR
-    ld bc, $2fff     ; set wait loop delay for emulator
+    ld bc, $0fff     ; set wait loop delay for emulator
 #else
     ld bc, $0eff     ; set wait loop delay 
 #endif    
@@ -367,13 +389,23 @@ drawLEM         ;; on zx81 with blcok characters the LEM is a 3 by 3 grid, the h
     ld hl, (playerPosAbsolute)      ; playerPosAbsolute is the centre of the lander    
     ld de, $0021
     add hl, de 
+    ld a, (leftThrustOn)
+    cp 0
     ld a, LEM_3_THR_OFF
+    jp z, leftThrustIsOn
+    ld a, LEM_3_THR_ON
+leftThrustIsOn    
     ld (hl), a
     inc hl
     ld a, LEM_4    
     ld (hl), a   
     inc hl
+    ld a, (rightThrustOn)
+    cp 0
     ld a, LEM_5_THR_OFF
+    jp z, rightThrustIsOn
+    ld a, LEM_5_THR_ON
+rightThrustIsOn            
     ld (hl), a      
     
     ld de, $001f
@@ -390,8 +422,8 @@ drawLEM         ;; on zx81 with blcok characters the LEM is a 3 by 3 grid, the h
 
 moveLemUp 
     ld a, (lemRowPos)
-    cp 0
-    ret 
+    cp 0     
+    jp z, endOfmoveLemUp
     dec a
     ld (lemRowPos), a
      
@@ -403,12 +435,13 @@ moveLemUp
     inc a
     daa
     ld (altitude), a
+endOfmoveLemUp    
     ret
 
 moveLemDown
     ld a, (lemRowPos)
     cp 20
-    ret 
+    jp z, endOfmoveLemDown
     inc a
     ld (lemRowPos), a
 
@@ -420,7 +453,8 @@ moveLemDown
     dec a
     daa
     ld (altitude), a
-   ret
+endOfmoveLemDown    
+    ret
 
 updateAGC
 
@@ -545,7 +579,7 @@ Display        	DEFB $76                                                  ;agc
                 DEFB 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,0,0,0,0,0,0,0,0,0,133,$76;Line20
                 DEFB 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,0,0,0,0,0,0,0,0,0,133,$76;Line21
                 DEFB 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,0,0,0,0,0,0,0,0,0,133,$76;Line22
-                DEFB 128,129,131,131,136,136,138,136,128,128,136,8,8,8,8,130,130,130,129,130,129,130,131,131,131,131,131,131,131,131,131,129,$76;Line23
+                DEFB 128,129,131,131,136,136,138,136,128,128,136,8,137,137,137,130,130,130,129,130,129,130,131,131,131,131,131,131,131,131,131,129,$76;Line23
 
                                                                
 Variables:      
@@ -564,12 +598,15 @@ playerPosAbsolute
 lemRowPos
     DEFB 0
 lemColPos
-    DEFB 0
+    DEFB 0  
 firstTime    
     DEFB 1
 Score    
     DEFB 0
-
+leftThrustOn    
+    DEFB 0
+rightThrustOn    
+    DEFB 0    
 
 ;;;;; LEM state
 x_vel
