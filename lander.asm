@@ -2,9 +2,6 @@
 ;;; by Adrian Pilkington 2023
 ;;; https://youtube.com/@byteforever7829
 
-;; game title inspired by the film Wargames (1983)
-;; "A strange game. The only winning move is not to play"
-
 ;some #defines for compatibility with other assemblers
 #define         DEFB .byte 
 #define         DEFW .word
