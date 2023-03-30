@@ -166,16 +166,17 @@ initVariables
     
     call drawLEM
       
-    ld a, 2
-    ld (playerRowPosition), a
+    ld a, 1
+    ld (playerRowPos), a
     inc a
-    ld (playerColPosition), a
+    inc a
+    ld (playerColPos), a
         
     xor a
     ld (firstTime), a
     ld (y_vel), a    
     ld (x_vel), a
-    ld a, 20
+    ld a, $20       ; store altitude in bcd for display
     ld (altitude), a 
     
     ld a, (Score)
@@ -238,30 +239,15 @@ rightThruster    ; firing right thruster causes lem to move left
     ld (x_vel), a
     jr updateStateAndDrawLEM
 thrustMainEngine    ; firing main engine causes lem to move up by two (but gravity brings down always by 1)
-    ld hl, (playerPosAbsolute)
-    ld de, 66
-    sbc hl, de
-    ld (playerPosAbsolute), hl
-    ld a, (y_vel)
-    sub e
-    ld (y_vel), a
-    ld a, (altitude)
-    inc a 
-    inc a
-    ld (altitude), a
+    call moveLemUp 
+    call moveLemUp 
     jr updateStateAndDrawLEM
     ;;;;;;;;; NO CODE SHOULD GO BETWEEN THIS AND  call updateLEMPhysicsState unless push/pop de
     
 updateStateAndDrawLEM        
     ;call updateLEMPhysicsState    
     ;; simple physics to get a demo going is to always ad 33 for gravity of + one row    
-    ld hl, (playerPosAbsolute)
-    ld de, 33
-    add hl, de
-    ld (playerPosAbsolute), hl
-    ld a, (altitude)
-    dec a
-    ld (altitude), a
+    call moveLemDown
     
     call drawLEM            
     call updateAGC
@@ -402,6 +388,39 @@ drawLEM         ;; on zx81 with blcok characters the LEM is a 3 by 3 grid, the h
     ld (hl), a  
     ret
 
+moveLemUp 
+    ld a, (lemRowPos)
+    cp 0
+    ret 
+    dec a
+    ld (lemRowPos), a
+     
+    ld hl, (playerPosAbsolute)
+    ld de, 33
+    sbc hl, de
+    ld (playerPosAbsolute), hl
+    ld a, (altitude)
+    inc a
+    daa
+    ld (altitude), a
+    ret
+
+moveLemDown
+    ld a, (lemRowPos)
+    cp 20
+    ret 
+    inc a
+    ld (lemRowPos), a
+
+    ld hl, (playerPosAbsolute)
+    ld de, 33
+    add hl, de
+    ld (playerPosAbsolute), hl
+    ld a, (altitude)
+    dec a
+    daa
+    ld (altitude), a
+   ret
 
 updateAGC
 
@@ -542,9 +561,9 @@ tempChar
     DEFB 0
 playerPosAbsolute
     DEFB 0,0
-playerRowPosition
+lemRowPos
     DEFB 0
-playerColPosition
+lemColPos
     DEFB 0
 firstTime    
     DEFB 1
