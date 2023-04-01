@@ -208,9 +208,10 @@ initVariables
     ld bc,694
     call printstring
     ld bc,727
+    ld de, moonSurface1
     call printstring
     ld bc, 760
-    ld de, moonSurface
+    ld de, moonSurface2
     call printstring
 
 gameLoop    
@@ -294,44 +295,32 @@ thrustMainEngine    ; firing main engine causes lem to move up by two (but gravi
     daa
     ld (status_FuelQty), a
     
-    ld a, (countSinceEngineOn)
-    cp 0
-    jp nz, resetCountSinceEngineOn   ;;; <<<<<<<<<<<<<<<<<<<<< THIS NEEDS FIXING
-    
-    ld a, (everyOther)
-    cp 3
-    jp z, zeroEveryOther
-    inc a
-    ld (everyOther), a
-    ld a, (countSinceEngineOn)    
-    inc a
-    ld (countSinceEngineOn), a
-    jr updateStateAndDrawLEM
-zeroEveryOther
     xor a
-    ld (everyOther), a
-resetCountSinceEngineOn
-    ld a, 0 
     ld (countSinceEngineOn), a
-    jr updateStateAndDrawLEM    
+       
+    jp updateStateAndDrawLEM
     ;;;;;;;;; NO CODE SHOULD GO BETWEEN THIS AND  call updateLEMPhysicsState unless push/pop de
     
 updateStateAndDrawLEM        
 
-    call moveLemLeftRight  
-    ;call updateLEMPhysicsState    
-    ;; simple physics to get a demo going is to always ad 33 for gravity of + one row        
-    ld a, (countSinceEngineOn)
-    ld b, a
-    inc b
-;accelerateToGround        
-    call moveLemDown
- ;   djnz accelerateToGround
-     
-    
-    ld a, (countSinceEngineOn)
+    ld a, (everyOther)
     inc a
-    ld (countSinceEngineOn), a
+    ld (everyOther), a
+    cp 2
+    jp z, doStuffEveryOther
+    jp afterDoStuffEveryOther
+doStuffEveryOther
+    xor a
+    ld (everyOther), a    
+    ld a, (countSinceEngineOn)    
+    inc a
+    daa
+    ld (countSinceEngineOn), a    
+    
+afterDoStuffEveryOther    
+    call moveLemLeftRight  
+
+    call moveLemDown
     
     call drawLEM            
     call updateAGC
@@ -353,7 +342,16 @@ checkCrash
     ld a, (countSinceEngineOn)
     cp 4
     jp nc, hitGroundGameOver    
-    jp playerWon
+    ld a, (x_velNeg)
+    cp 0    
+    jp nz, hitGroundGameOver
+    ld a, (x_velPosi)
+    cp 0
+    jp nz, hitGroundGameOver    
+    ld a, (lemColPos)
+    cp 17           ; you have to land in the landing zone
+    jp z, playerWon
+    jp hitGroundGameOver        
 
 hitGroundGameOver
     ld hl, (playerPosAbsolute)
@@ -414,7 +412,7 @@ updateLEMPhysicsState
     
 waitLoop
 #ifdef RUN_ON_EMULATOR
-    ld bc, $2fff     ; set wait loop delay for emulator
+    ld bc, $1aff     ; set wait loop delay for emulator
 #else
     ld bc, $0eff     ; set wait loop delay 
 #endif    
@@ -770,8 +768,8 @@ Display        	DEFB $76                                                  ;agc
                 DEFB 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,0,0,0,0,0,0,0,0,0,133,$76;Line19
                 DEFB 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,0,0,0,0,0,0,0,0,0,133,$76;Line20
                 DEFB 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,0,0,0,0,0,0,0,0,0,133,$76;Line21
-                DEFB 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,0,0,0,0,0,0,0,0,0,133,$76;Line22
-                DEFB 128,129,131,131,136,136,138,136,128,128,136,8,137,137,137,130,130,130,129,130,129,130,131,131,131,131,131,131,131,131,131,129,$76;Line23
+                DEFB   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,0,  0,  0,  0,  0,177,  0,  0,  0,177,5,0,0,0,0,0,0,0,0,0,133,$76;Line22
+                DEFB 128,129,131,131,136,136,137,137,136,136,136,8,137,137,137,130,177,177,177,177,177,130,131,131,131,131,131,131,131,131,131,129,$76;Line23
 
                                                                
 Variables:      
@@ -835,8 +833,11 @@ titleText
     DEFB _L,_A,_N,_D,_E,_R,__,_S,_I,_M,_U,_L,_A,_T,_I,_O,_N,$ff
 clearRow    
     DEFB 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,$ff
-moonSurface
-    DEFB 128,129,131,131,136,136,138,136,128,128,136,$ff
+
+moonSurface1
+    DEFB 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,0,  0,  0,  0,  0,177,  0,  0,  0,177,$ff     ; edges of landing zone 177
+moonSurface2
+    DEFB 128,129,131,131,136,136,137,137,136,136,136,8,137,137,137,130,177,177,177,177,177,$ff   ; the landing zone is th 177
      
 everyOther
     DEFB 0
