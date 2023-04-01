@@ -199,6 +199,19 @@ initVariables
     ld a, 117
     ld (status_FuelQty), a    
     
+    ;; clear the lower 4 rows of play area, as may be "crash" debris
+    ld bc,628
+    ld de, clearRow
+    call printstring
+    ld bc,661
+    call printstring
+    ld bc,694
+    call printstring
+    ld bc,727
+    call printstring
+    ld bc, 760
+    ld de, moonSurface
+    call printstring
 
 gameLoop    
     ld a, (firstTime)
@@ -231,25 +244,40 @@ gameLoop
     jp updateStateAndDrawLEM
 
 leftThruster            ; firing left thruster causes lem to move right
-    ld a, 1         
-    ld (leftThrustOn), a    ;; this is to change "sprite"
+    ;; check if last time the other thruster was on, then zero rate
+    ld a, (x_velNeg)
+    cp 1
+    jp z, zeroBothL
     
-    ld a, 1
+    ld a, 1         
+    ld (leftThrustOn), a    ;; this is to change "sprite"        
     ld (x_velPosi), a       
     xor a
     ld (x_velNeg), a
-    
-    
     jr updateStateAndDrawLEM    
+    
+zeroBothL
+    xor a
+    ld (x_velNeg), a           
+    ld (x_velPosi), a
+    jr updateStateAndDrawLEM
+    
 rightThruster    ; firing right thruster causes lem to move left
+    ;; check if last time the other thruster was on, then zero rate
+    ld a, (x_velPosi)
+    cp 1
+    jp z, zeroBothR
     ld a, 1
-    ld (rightThrustOn), a  ;; this is to change "sprite"
-        
-    ld a, 1     
+    ld (rightThrustOn), a  ;; this is to change "sprite"           
     ld (x_velNeg), a       
     xor a
     ld (x_velPosi), a
     
+    jr updateStateAndDrawLEM
+zeroBothR    
+    xor a
+    ld (x_velNeg), a           
+    ld (x_velPosi), a
     jr updateStateAndDrawLEM
 thrustMainEngine    ; firing main engine causes lem to move up by two (but gravity brings down always by 1)
     ; check fuel quanity remaining
@@ -316,10 +344,6 @@ updateStateAndDrawLEM
     ld a, (altitude)         
     cp 2
     jp z, checkCrash
-    cp 1
-    jp z, checkCrash
-    cp 0
-    jp z, checkCrash
     
 aftercheckCrash
     call waitLoop
@@ -368,23 +392,19 @@ waitPlayerOver
     ;; never gets to here
    
 playerWon    
-   
+    ld bc, 1
+    ld de, goodLandingText
+    call printstring    
 #ifdef RUN_ON_EMULATOR
     ld e, 20 
 #else
     ld e, 15 
-#endif   
-waitPlayerWon     
-    ld bc, 1
-    ld de, goodLandingText
-    call printstring
+#endif       
+waitPlayerWon           
     call waitLoop   
     dec e
     jp nz, waitPlayerWon
-    
-    call eraseLEM
-    jp initVariables
-    
+    jp initVariables    
     ;; never gets to here
 
 
@@ -680,6 +700,7 @@ afterDisplayVelocity
         
 ; this prints at to any offset (stored in bc) from the top of the screen Display, using string in de
 printstring
+    push de ; preserve de
     ld hl,Display
     add hl,bc	
 printstring_loop
@@ -691,6 +712,7 @@ printstring_loop
     inc de
     jr printstring_loop
 printstring_end	
+    pop de  ; preserve de
     ret  
     
 print_number8bits
@@ -811,7 +833,11 @@ goodLandingText
     DEFB _G,_O,_O,_D,__,_L,_A,_N,_D,_I,_N,_G,__,__,__,__,__,__$ff  ; padding to overwrite the title
 titleText
     DEFB _L,_A,_N,_D,_E,_R,__,_S,_I,_M,_U,_L,_A,_T,_I,_O,_N,$ff
-    
+clearRow    
+    DEFB 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,$ff
+moonSurface
+    DEFB 128,129,131,131,136,136,138,136,128,128,136,$ff
+     
 everyOther
     DEFB 0
 VariablesEnd:   DEFB $80
