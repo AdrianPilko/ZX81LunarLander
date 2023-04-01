@@ -155,6 +155,9 @@ firstTimeInit
     ld a, 1
     ld (Score), a    
 initVariables
+    ld bc, 1
+    ld de, titleText
+    call printstring
     ;; some variable initialisation
     ld hl, (DF_CC)
     ld de, 69
@@ -176,7 +179,8 @@ initVariables
     ld (rightThrustOn), a
     ld (firstTime), a
     ld (y_vel), a    
-    ld (x_vel), a
+    ld (x_velPosi), a
+    ld (x_velNeg), a
     ld a, $20       ; store altitude in bcd for display
     ld (altitude), a 
     
@@ -227,35 +231,25 @@ gameLoop
     jp updateStateAndDrawLEM
 
 leftThruster            ; firing left thruster causes lem to move right
+    ld a, 1         
+    ld (leftThrustOn), a    ;; this is to change "sprite"
+    
     ld a, 1
-    ld (leftThrustOn), a    
-    ld a, (lemColPos)    
-    cp 17
-    jp z, updateStateAndDrawLEM
-    inc a
-    ld (lemColPos), a
-    ld hl, (playerPosAbsolute)
-    inc hl
-    ld (playerPosAbsolute), hl
-    ld a, (x_vel)
-    dec a
-    ld (x_vel), a
+    ld (x_velPosi), a       
+    xor a
+    ld (x_velNeg), a
+    
+    
     jr updateStateAndDrawLEM    
 rightThruster    ; firing right thruster causes lem to move left
     ld a, 1
-    ld (rightThrustOn), a
+    ld (rightThrustOn), a  ;; this is to change "sprite"
+        
+    ld a, 1     
+    ld (x_velNeg), a       
+    xor a
+    ld (x_velPosi), a
     
-    ld a, (lemColPos)    
-    cp 0
-    jp z, updateStateAndDrawLEM 
-    dec a
-    ld (lemColPos), a
-    ld hl, (playerPosAbsolute)    
-    dec hl
-    ld (playerPosAbsolute), hl
-    ld a, (x_vel)
-    inc a
-    ld (x_vel), a
     jr updateStateAndDrawLEM
 thrustMainEngine    ; firing main engine causes lem to move up by two (but gravity brings down always by 1)
     ; check fuel quanity remaining
@@ -266,8 +260,7 @@ thrustMainEngine    ; firing main engine causes lem to move up by two (but gravi
     ld a, 1
     ld (mainEngineOn), a
     call moveLemUp 
-    call moveLemUp   
-    call moveLemUp
+    call moveLemUp       
     ld a, (status_FuelQty)
     dec a
     daa
@@ -275,7 +268,7 @@ thrustMainEngine    ; firing main engine causes lem to move up by two (but gravi
     
     ld a, (countSinceEngineOn)
     cp 0
-    jp nz, resetCountSinceEngineOn
+    jp nz, resetCountSinceEngineOn   ;;; <<<<<<<<<<<<<<<<<<<<< THIS NEEDS FIXING
     
     ld a, (everyOther)
     cp 3
@@ -296,14 +289,16 @@ resetCountSinceEngineOn
     ;;;;;;;;; NO CODE SHOULD GO BETWEEN THIS AND  call updateLEMPhysicsState unless push/pop de
     
 updateStateAndDrawLEM        
+
+    call moveLemLeftRight  
     ;call updateLEMPhysicsState    
     ;; simple physics to get a demo going is to always ad 33 for gravity of + one row        
     ld a, (countSinceEngineOn)
     ld b, a
     inc b
-accelerateToGround        
+;accelerateToGround        
     call moveLemDown
-    djnz accelerateToGround
+ ;   djnz accelerateToGround
      
     
     ld a, (countSinceEngineOn)
@@ -350,15 +345,14 @@ hitGroundGameOver
     ld hl, (playerPosAbsolute)
     ld de, 33
     sbc hl, de
-    dec hl
-    ld (hl), a
-    dec hl
-    ld (hl), a
+    ld (hl), a    
     inc hl
-    inc hl
-    inc hl
+    inc hl    
     ld (hl), a
-        
+    ld bc, 1
+    ld de, youCrashedText
+    call printstring
+  
    
 #ifdef RUN_ON_EMULATOR
     ld e, 20 
@@ -381,6 +375,9 @@ playerWon
     ld e, 15 
 #endif   
 waitPlayerWon     
+    ld bc, 1
+    ld de, goodLandingText
+    call printstring
     call waitLoop   
     dec e
     jp nz, waitPlayerWon
@@ -407,7 +404,38 @@ waitloop1
     or c
     jr nz, waitloop1
     ret
+    
+moveLemLeftRight
+    ld a, (x_velNeg)
+    cp 0
+    jp z, checkMoveOtherWay
+    ; move left
+    ld a, (lemColPos)    
+    cp 0
+    jp z, moveLemLeftRightEnd
+    dec a
+    ld (lemColPos), a
+    ld hl, (playerPosAbsolute)    
+    dec hl
+    ld (playerPosAbsolute), hl    
 
+checkMoveOtherWay    
+    ld a, (x_velPosi)
+    cp 0
+    jp z, moveLemLeftRightEnd    
+    ;; move lem right
+    ld a, (lemColPos)    
+    cp 17
+    jp z, moveLemLeftRightEnd
+    inc a
+    ld (lemColPos), a
+    ld hl, (playerPosAbsolute)
+    inc hl
+    ld (playerPosAbsolute), hl
+    jp moveLemLeftRightEnd
+
+moveLemLeftRightEnd    
+    ret
 
 eraseLEM
     ld hl, (playerPosAbsolute)      ; playerPosAbsolute is the top left of the lander    
@@ -609,6 +637,44 @@ afterPrint
     ld de, 291 
     ld a, (countSinceEngineOn)
     call print_number8bits 
+            
+    ld a, (x_velPosi)
+    cp 0
+    jp z, checkVelocityNegative
+    ld de, 222
+    ld hl, Display
+    add hl, de
+    ld a, 21
+    ld (hl), a
+    
+    ld de, 225   
+    ld a, 1
+    call print_number8bits    
+    
+    jp afterDisplayVelocity    
+    
+checkVelocityNegative      
+    ld a, (x_velNeg)
+    cp 0 
+    jp z, displayZeroVelocity    
+    ; change sign to neative on display
+    ld de, 222
+    ld hl, Display
+    add hl, de
+    ld a, 22
+    ld (hl), a
+    
+    ld de, 225   
+    ld a, 1
+    call print_number8bits    
+    jp afterDisplayVelocity
+    
+displayZeroVelocity
+    ld de, 225
+    ld a, 0
+    call print_number8bits      
+afterDisplayVelocity    
+
     ret
 
         
@@ -718,7 +784,9 @@ status_FuelQty
 countSinceEngineOn
     DEFB 0
 ;;;;; LEM state
-x_vel
+x_velPosi
+    DEFB 0  
+x_velNeg 
     DEFB 0  
 y_vel
     DEFB 0
@@ -737,6 +805,13 @@ agc_verb
 ;; for number conversion
 tempStr
     DEFB 0,0,0,0,0,0,0,0,0,0,$ff
+youCrashedText
+    DEFB _Y,_O,_U,__,_C,_R,_A,_S,_H,_E,_D,__,__,__,__,__,__,__$ff     ; padding to overwrite the title
+goodLandingText
+    DEFB _G,_O,_O,_D,__,_L,_A,_N,_D,_I,_N,_G,__,__,__,__,__,__$ff  ; padding to overwrite the title
+titleText
+    DEFB _L,_A,_N,_D,_E,_R,__,_S,_I,_M,_U,_L,_A,_T,_I,_O,_N,$ff
+    
 everyOther
     DEFB 0
 VariablesEnd:   DEFB $80
