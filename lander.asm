@@ -174,7 +174,8 @@ initVariables
         
     xor a
     ld (everyOther), a
-    ld (countSinceEngineOn), a
+    ld (countSinceEngineOnPosi), a
+    ld (countSinceEngineOnNeg), a
     ld (leftThrustOn), a
     ld (rightThrustOn), a
     ld (firstTime), a
@@ -288,6 +289,10 @@ thrustMainEngine    ; firing main engine causes lem to move up by two (but gravi
     
     ld a, 1
     ld (mainEngineOn), a
+    
+    ld a, 3        
+    ld (countSinceEngineOnNeg), a 
+    
     call moveLemUp 
     call moveLemUp       
     ld a, (status_FuelQty)
@@ -296,7 +301,9 @@ thrustMainEngine    ; firing main engine causes lem to move up by two (but gravi
     ld (status_FuelQty), a
     
     xor a
-    ld (countSinceEngineOn), a
+    ld (countSinceEngineOnPosi), a
+    
+    
        
     jp updateStateAndDrawLEM
     ;;;;;;;;; NO CODE SHOULD GO BETWEEN THIS AND  call updateLEMPhysicsState unless push/pop de
@@ -311,12 +318,22 @@ updateStateAndDrawLEM
     jp afterDoStuffEveryOther
 doStuffEveryOther
     xor a
-    ld (everyOther), a    
-    ld a, (countSinceEngineOn)    
+    ld (everyOther), a        
+    ld a, (countSinceEngineOnNeg)    
+    cp 0
+    jp z, mainEngineEffectZero        
+    dec a
+    ld (countSinceEngineOnNeg), a    
+
+    jr afterDoStuffEveryOther    
+    
+mainEngineEffectZero
+    xor a
+    ld (countSinceEngineOnNeg), a    
+    ld a, (countSinceEngineOnPosi)    
     inc a
     daa
-    ld (countSinceEngineOn), a    
-    
+    ld (countSinceEngineOnPosi), a        
 afterDoStuffEveryOther    
     call moveLemLeftRight  
 
@@ -339,7 +356,7 @@ aftercheckCrash
     jp gameLoop    
     
 checkCrash
-    ld a, (countSinceEngineOn)
+    ld a, (countSinceEngineOnPosi)
     cp 4
     jp nc, hitGroundGameOver    
     ld a, (x_velNeg)
@@ -349,7 +366,7 @@ checkCrash
     cp 0
     jp nz, hitGroundGameOver    
     ld a, (lemColPos)
-    cp 17           ; you have to land in the landing zone
+    cp 16           ; you have to land in the landing zone
     jp z, playerWon
     jp hitGroundGameOver        
 
@@ -652,10 +669,39 @@ afterPrint
     ld a, (status_FuelQty) ; stored as bcd
     call print_number8bits 
     
+    
     ld de, 291 
-    ld a, (countSinceEngineOn)
+    ld a, (countSinceEngineOnPosi)
+    cp 0
+    jp z, checkVerticalRiseRate        
     call print_number8bits 
-            
+    
+    ld de, 288      ; print + symbol
+    ld hl, Display
+    add hl, de
+    ld a, 21   ; symbol code for "+"
+    ld (hl), a
+      
+    jr afterCheckVerticalRiseRate
+checkVerticalRiseRate
+    ld a, (countSinceEngineOnNeg)    ; should really be called vertical rate negatgive!
+    cp 0
+    jp z, printZeroVerticalRate
+    ld a, (countSinceEngineOnNeg)
+    call print_number8bits  
+    ld de, 288
+    ld hl, Display
+    add hl, de
+    ld a, 22   ; symbol code for "-"
+    ld (hl), a
+
+    jp afterCheckVerticalRiseRate
+printZeroVerticalRate
+    ld a, 0
+    call print_number8bits  
+
+afterCheckVerticalRiseRate            
+
     ld a, (x_velPosi)
     cp 0
     jp z, checkVelocityNegative
@@ -768,8 +814,8 @@ Display        	DEFB $76                                                  ;agc
                 DEFB 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,0,0,0,0,0,0,0,0,0,133,$76;Line19
                 DEFB 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,0,0,0,0,0,0,0,0,0,133,$76;Line20
                 DEFB 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,0,0,0,0,0,0,0,0,0,133,$76;Line21
-                DEFB   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,0,  0,  0,  0,  0,177,  0,  0,  0,177,5,0,0,0,0,0,0,0,0,0,133,$76;Line22
-                DEFB 128,129,131,131,136,136,137,137,136,136,136,8,137,137,137,130,177,177,177,177,177,130,131,131,131,131,131,131,131,131,131,129,$76;Line23
+                DEFB   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,0,  0,  0,  0,  177,0,  0,  0,  177,0,5,0,0,0,0,0,0,0,0,0,133,$76;Line22
+                DEFB 128,129,131,131,136,136,137,137,136,136,136,8,137,137,137,177,177,177,177,177,136,130,131,131,131,131,131,131,131,131,131,129,$76;Line23
 
                                                                
 Variables:      
@@ -801,7 +847,9 @@ mainEngineOn
     DEFB 0
 status_FuelQty    
     DEFB 0
-countSinceEngineOn
+countSinceEngineOnPosi
+    DEFB 0   
+countSinceEngineOnNeg    
     DEFB 0
 ;;;;; LEM state
 x_velPosi
@@ -835,9 +883,9 @@ clearRow
     DEFB 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,$ff
 
 moonSurface1
-    DEFB 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,0,  0,  0,  0,  0,177,  0,  0,  0,177,$ff     ; edges of landing zone 177
+    DEFB 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,0,  0,  0,  0,  177,0,  0,  0,  177,0,$ff     ; edges of landing zone 177
 moonSurface2
-    DEFB 128,129,131,131,136,136,137,137,136,136,136,8,137,137,137,130,177,177,177,177,177,$ff   ; the landing zone is th 177
+    DEFB 128,129,131,131,136,136,137,137,136,136,136,8,137,137,137,177,177,177,177,177,136,$ff   ; the landing zone is th 177
      
 everyOther
     DEFB 0
