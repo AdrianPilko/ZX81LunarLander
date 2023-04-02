@@ -173,9 +173,9 @@ initVariables
     ld (lemColPos), a
         
     xor a
-    ld (everyOther), a
-    ld (countSinceEngineOnPosi), a
+    ld (everyOther), a    
     ld (countSinceEngineOnNeg), a
+    ld (countSinceEngineOnPosi), a
     ld (leftThrustOn), a
     ld (rightThrustOn), a
     ld (firstTime), a
@@ -290,11 +290,12 @@ thrustMainEngine    ; firing main engine causes lem to move up by two (but gravi
     ld a, 1
     ld (mainEngineOn), a
     
-    ld a, 3        
+    ;ld a, 2    
+    ld a, (countSinceEngineOnNeg)
+    inc a
+    daa
     ld (countSinceEngineOnNeg), a 
     
-    call moveLemUp 
-    call moveLemUp       
     ld a, (status_FuelQty)
     dec a
     daa
@@ -302,18 +303,17 @@ thrustMainEngine    ; firing main engine causes lem to move up by two (but gravi
     
     xor a
     ld (countSinceEngineOnPosi), a
-    
-    
-       
+      
     jp updateStateAndDrawLEM
-    ;;;;;;;;; NO CODE SHOULD GO BETWEEN THIS AND  call updateLEMPhysicsState unless push/pop de
     
+    
+    ;;;;;;;;; NO CODE SHOULD GO BETWEEN THIS AND  call updateLEMPhysicsState unless push/pop de    
 updateStateAndDrawLEM        
 
     ld a, (everyOther)
     inc a
     ld (everyOther), a
-    cp 2
+    cp 3
     jp z, doStuffEveryOther
     jp afterDoStuffEveryOther
 doStuffEveryOther
@@ -328,19 +328,49 @@ doStuffEveryOther
     jr afterDoStuffEveryOther    
     
 mainEngineEffectZero
-    xor a
-    ld (countSinceEngineOnNeg), a    
     ld a, (countSinceEngineOnPosi)    
     inc a
     daa
+    cp 3
+    jp z, noIncDownRate
+    
     ld (countSinceEngineOnPosi), a        
+noIncDownRate    
+    
 afterDoStuffEveryOther    
     call moveLemLeftRight  
-
-    call moveLemDown
     
-    call drawLEM            
-    call updateAGC
+    ld a, (countSinceEngineOnNeg)
+    cp 0
+    jp z, checkMoveLemDown    
+    ld b, a
+moveLemUpLoop    
+    push bc
+    call eraseLEM
+    call moveLemUp    
+    call updateAGC  
+    call drawLEM 
+    pop bc
+    djnz moveLemUpLoop
+checkMoveLemDown  
+    ld a, (countSinceEngineOnPosi)
+    cp 0
+    jp z, afterCheckMoveLemUp    
+    ld b, a
+moveLemDownLoop 
+    push bc    
+    call eraseLEM
+    call moveLemDown
+    ld a, (altitude)         
+    cp 2
+    jp z, checkCrash
+    call updateAGC  
+    call drawLEM 
+    pop bc
+    djnz moveLemDownLoop      
+afterCheckMoveLemUp    
+    
+    call drawLEM 
     
     xor a 
     ld (leftThrustOn), a
@@ -357,7 +387,7 @@ aftercheckCrash
     
 checkCrash
     ld a, (countSinceEngineOnPosi)
-    cp 4
+    cp 3
     jp nc, hitGroundGameOver    
     ld a, (x_velNeg)
     cp 0    
@@ -366,7 +396,7 @@ checkCrash
     cp 0
     jp nz, hitGroundGameOver    
     ld a, (lemColPos)
-    cp 16           ; you have to land in the landing zone
+    cp 16           ; you have to land in the landing zone    
     jp z, playerWon
     jp hitGroundGameOver        
 
@@ -389,8 +419,9 @@ hitGroundGameOver
     inc hl    
     ld (hl), a
     ld bc, 1
-    ld de, youCrashedText
+    ld de, youCrashedText    
     call printstring
+    call drawLEM
   
    
 #ifdef RUN_ON_EMULATOR
@@ -410,6 +441,7 @@ playerWon
     ld bc, 1
     ld de, goodLandingText
     call printstring    
+    call drawLEM 
 #ifdef RUN_ON_EMULATOR
     ld e, 20 
 #else
