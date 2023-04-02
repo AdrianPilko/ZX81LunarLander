@@ -152,9 +152,14 @@ Line1:          DEFB $00,$0a                    ; Line 10
 Line1Text:      DEFB $ea                        ; REM
         
 firstTimeInit
-    ld a, 1
-    ld (Score), a    
+
 initVariables
+    ld de, blankPartLine
+    ld bc, 518
+    call printstring 
+    ld bc, 551
+    call printstring     
+    
     ld bc, 1
     ld de, titleText
     call printstring
@@ -171,6 +176,7 @@ initVariables
     inc a
     inc a
     ld (lemColPos), a
+    
         
     xor a
     ld (everyOther), a    
@@ -290,19 +296,19 @@ thrustMainEngine    ; firing main engine causes lem to move up by two (but gravi
     ld a, 1
     ld (mainEngineOn), a
     
-    ;ld a, 2    
     ld a, (countSinceEngineOnNeg)
+    ;cp 7
+    ;jp z, skipIncMainEngine    ;; if greater than 7 then skip inc, limit to 8
     inc a
     daa
-    ld (countSinceEngineOnNeg), a 
-    
+    ld (countSinceEngineOnNeg), a    
     ld a, (status_FuelQty)
     dec a
     daa
-    ld (status_FuelQty), a
-    
+    ld (status_FuelQty), a    
     xor a
     ld (countSinceEngineOnPosi), a
+skipIncMainEngine 
       
     jp updateStateAndDrawLEM
     
@@ -323,6 +329,7 @@ doStuffEveryOther
     cp 0
     jp z, mainEngineEffectZero        
     dec a
+    daa
     ld (countSinceEngineOnNeg), a    
 
     jr afterDoStuffEveryOther    
@@ -701,7 +708,19 @@ afterPrint
     ld a, (status_FuelQty) ; stored as bcd
     call print_number8bits 
     
+    ld a, (status_FuelQty)
+    ;;; flash a warning message if fuel low
+    cp $15              ; this is bcd remember so hex 15 ($15) _is_ 15
+    jp z, flashFuelWarning
+    jp afterFlashFuelWarning
+flashFuelWarning
+    ld de, fuelWarningTextInverse
+    ld bc, 518
+    call printstring 
+    ld bc, 551
+    call printstring     
     
+afterFlashFuelWarning    
     ld de, 291 
     ld a, (countSinceEngineOnPosi)
     cp 0
@@ -903,8 +922,11 @@ agc_noun
 agc_verb   
     DEFB 0   
 ;; for number conversion
-tempStr
-    DEFB 0,0,0,0,0,0,0,0,0,0,$ff
+blankPartLine
+    DEFB 0,0,0,0,0,0,0,0,0,$ff
+    DEFB _F+128,_U+128,_E+128,_L+128,128,128,_L+128,_O+128,_W+128,$ff
+fuelWarningTextInverse    
+    DEFB _F+128,_U+128,_E+128,_L+128,128,128,_L+128,_O+128,_W+128,$ff
 youCrashedText
     DEFB _Y,_O,_U,__,_C,_R,_A,_S,_H,_E,_D,__,__,__,__,__,__,__$ff     ; padding to overwrite the title
 goodLandingText
