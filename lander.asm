@@ -486,29 +486,32 @@ moveLemLeftRight
     ; move left
     ld a, (lemColPos)    
     cp 0
-    jp z, moveLemLeftRightEnd
+    jp z, scrollGroundRight
     dec a
     ld (lemColPos), a
     ld hl, (playerPosAbsolute)    
     dec hl
     ld (playerPosAbsolute), hl    
-
+    
 checkMoveOtherWay    
     ld a, (x_velPosi)
     cp 0
-    jp z, moveLemLeftRightEnd    
+    jp z, endMoveLemLeftRightEnd    
     ;; move lem right
     ld a, (lemColPos)    
     cp 17
-    jp z, moveLemLeftRightEnd
+    jp z, scrollGroundLeft
     inc a
     ld (lemColPos), a
     ld hl, (playerPosAbsolute)
     inc hl
     ld (playerPosAbsolute), hl
-    jp moveLemLeftRightEnd
+    jp endMoveLemLeftRightEnd
 
-moveLemLeftRightEnd    
+scrollGroundLeft    
+scrollGroundRight
+
+endMoveLemLeftRightEnd
     ret
 
 eraseLEM
