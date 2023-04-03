@@ -151,8 +151,6 @@ Line1:          DEFB $00,$0a                    ; Line 10
                 DEFW Line1End-Line1Text         ; Line 10 length
 Line1Text:      DEFB $ea                        ; REM
         
-firstTimeInit
-
 initVariables
     ld de, blankPartLine
     ld bc, 518
@@ -176,24 +174,23 @@ initVariables
     inc a
     inc a
     ld (lemColPos), a
+
+    ld a, 1
+    ld (firstTime), a
     
-        
     xor a
     ld (everyOther), a    
     ld (countSinceEngineOnNeg), a
     ld (countSinceEngineOnPosi), a
     ld (leftThrustOn), a
     ld (rightThrustOn), a
-    ld (firstTime), a
+    
     ld (y_vel), a    
     ld (x_velPosi), a
     ld (x_velNeg), a
     ld a, $20       ; store altitude in bcd for display
     ld (altitude), a 
     
-    ld a, (Score)
-    dec a
-    ld (Score), a
     ld a, 102
     ld (agc_program), a
     
@@ -214,17 +211,27 @@ initVariables
     call printstring
     ld bc,694
     call printstring
+    
     ld bc,727
-    ld de, moonSurface1
-    call printstring
+    ld de, moonSurface1+40
+    ld (ptrToGround1), de
+    call printGround 
+   
     ld bc, 760
-    ld de, moonSurface2
-    call printstring
+    ld de, moonSurface2+40
+    ld (ptrToGround2), de
+    call printGround
+    
+    ;;; zero registers
+    xor a
+    ld bc, 0   
+    ld hl, 0   
+    ld de, 0
 
 gameLoop    
     ld a, (firstTime)
-    cp 1
-    jp z, firstTimeInit
+    cp 0
+    jp z, initVariables
 
     ld d, NON_FIRED
     ld e, 0
@@ -338,7 +345,7 @@ mainEngineEffectZero
     ld a, (countSinceEngineOnPosi)    
     inc a
     daa
-    cp 3
+    cp 9
     jp z, noIncDownRate
     
     ld (countSinceEngineOnPosi), a        
@@ -394,7 +401,7 @@ aftercheckCrash
     
 checkCrash
     ld a, (countSinceEngineOnPosi)
-    cp 3
+    cp 2
     jp nc, hitGroundGameOver    
     ld a, (x_velNeg)
     cp 0    
@@ -402,8 +409,9 @@ checkCrash
     ld a, (x_velPosi)
     cp 0
     jp nz, hitGroundGameOver    
-    ld a, (lemColPos)
-    cp 16           ; you have to land in the landing zone    
+    ;ld a, (lemColPos)   
+    ;cp 16           ; you have to land in the landing zone    
+    ;;;;;;;;;;;; TEMP DISABLE THIS NOW WE HAVE GROUND SCROLLING
     jp z, playerWon
     jp hitGroundGameOver        
 
@@ -508,9 +516,39 @@ checkMoveOtherWay
     ld (playerPosAbsolute), hl
     jp endMoveLemLeftRightEnd
 
-scrollGroundLeft    
+scrollGroundLeft
+    ld hl, (ptrToGround1)
+    inc hl
+    ld (ptrToGround1), hl
+    ld hl, (ptrToGround2)
+    inc hl    
+    ld (ptrToGround2), hl
+    
+    ld bc,727
+    ld de, (ptrToGround1)
+    call printGround 
+   
+    ld bc, 760
+    ld de, (ptrToGround2)
+    call printGround    
+    jp endMoveLemLeftRightEnd
+    
 scrollGroundRight
-
+    ld hl, (ptrToGround1)
+    dec hl
+    ld (ptrToGround1), hl
+    ld hl, (ptrToGround2)
+    dec hl
+    ld (ptrToGround2), hl
+    
+    ld bc,727
+    ld de, (ptrToGround1)
+    call printGround 
+   
+    ld bc, 760
+    ld de, (ptrToGround2)
+    call printGround
+    
 endMoveLemLeftRightEnd
     ret
 
@@ -554,7 +592,8 @@ eraseLEM
     ld de, 32
     add hl, de    
     ld a, 0
-    ld (hl), a
+    ld (hl), a   
+    
 mainEngineNotOn    
     ret
 
@@ -813,6 +852,26 @@ printstring_end
     pop de  ; preserve de
     ret  
     
+printGround
+    push bc
+    push hl
+    push de
+; print ground is different to print string, it has a specific loop count and starts from a pointer to 
+; a location within the ground memory so it can appear to scroll left or right (stored in bc)
+    ld hl,Display
+    add hl,bc	
+    ld b, 21
+printGround_loop
+    ld a,(de)        
+    ld (hl),a
+    inc hl
+    inc de
+    djnz printGround_loop
+    pop de
+    pop hl        
+    pop bc
+    ret  
+    
 print_number8bits
     ld hl, (DF_CC)    
     add hl, de    
@@ -868,8 +927,8 @@ Display        	DEFB $76                                                  ;agc
                 DEFB 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,0,0,0,0,0,0,0,0,0,133,$76;Line19
                 DEFB 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,0,0,0,0,0,0,0,0,0,133,$76;Line20
                 DEFB 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,0,0,0,0,0,0,0,0,0,133,$76;Line21
-                DEFB   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,0,  0,  0,  0,  177,0,  0,  0,  177,0,5,0,0,0,0,0,0,0,0,0,133,$76;Line22
-                DEFB 128,129,131,131,136,136,137,137,136,136,136,8,137,137,137,177,177,177,177,177,136,130,131,131,131,131,131,131,131,131,131,129,$76;Line23
+                DEFB 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,0,0,0,0,0,0,0,0,0,133,$76;Line22
+                DEFB 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,130,131,131,131,131,131,131,131,131,131,129,$76;Line23
 
                                                                
 Variables:      
@@ -889,10 +948,12 @@ lemRowPos
     DEFB 0
 lemColPos
     DEFB 0  
+pad1
+    DEFB 0    
 firstTime    
-    DEFB 1
-Score    
     DEFB 0
+pad2
+    DEFB 0        
 leftThrustOn    
     DEFB 0
 rightThrustOn    
@@ -938,12 +999,28 @@ titleText
     DEFB _L,_A,_N,_D,_E,_R,__,_S,_I,_M,_U,_L,_A,_T,_I,_O,_N,$ff
 clearRow    
     DEFB 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,$ff
-
+ptrToGround1
+    DEFB   0,0
+ptrToGround2
+    DEFB   0,0
 moonSurface1
-    DEFB 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,0,  0,  0,  0,  177,0,  0,  0,  177,0,$ff     ; edges of landing zone 177
+    DEFB   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 0,  0,  0,  0,  0,  0,  0,  0,  0, 0
+    DEFB   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 0,  0,  0,  0,  0,  0,  0,  0,  0, 0
+    DEFB   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 0,  0,  0,  0,  0,  0,  0,  0,  0, 0
+    DEFB   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 0,  0,  0,  0,177,  0,  0,  0,177, 0     ; edges of landing zone 177
+    DEFB   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 0,  0,  0,  0,  0,  0,  0,  0,  0, 0     
+    DEFB   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 0,  0,  0,  0,  0,  0,  0,  0,  0, 0     
+    DEFB   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 0,  0,  0,  0,  0,  0,  0,  0,  0, 0
+    DEFB   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 0,  0,  0,  0,  0,  0,  0,  0,  0, 0    
 moonSurface2
-    DEFB 128,129,131,131,136,136,137,137,136,136,136,8,137,137,137,177,177,177,177,177,136,$ff   ; the landing zone is th 177
-     
+    DEFB 131,131,136,136,137,137,136,136,131,131,136,136,137,137,136,136,131,131,136,136,131
+    DEFB 131,131,136,136,137,137,136,136,131,131,136,136,137,137,136,136,131,131,136,136,131    
+    DEFB 131,131,136,136,137,137,136,136,131,131,136,136,137,137,136,136,131,131,136,136,131
+    DEFB 128,129,131,131,136,136,137,137,136,136,136,  8,137,137,137,177,177,177,177,177,136  ; landing zone 177 (inverse L)
+    DEFB 128,129,131,131,136,136,137,137,136,136,136,  8,137,137,137,128,129,131,131,136,136
+    DEFB 131,131,136,136,137,137,136,136,131,131,136,136,137,137,136,136,131,131,136,136,131
+    DEFB 131,131,136,136,137,137,136,136,131,131,136,136,137,137,136,136,131,131,136,136,131
+    DEFB 131,131,136,136,137,137,136,136,131,131,136,136,137,137,136,136,131,131,136,136,131    
 everyOther
     DEFB 0
 VariablesEnd:   DEFB $80
