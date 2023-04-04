@@ -215,12 +215,14 @@ initVariables
     ld bc,727
     ld de, moonSurface1+40
     ld (ptrToGround1), de
-    call printGround 
-   
-    ld bc, 760
+    call printGroundjustAbove
+    
+    ld bc,760
     ld de, moonSurface2+40
     ld (ptrToGround2), de
-    call printGround
+    call printGroundBottom
+   
+    
     
     ;;; zero registers
     xor a
@@ -520,34 +522,36 @@ scrollGroundLeft
     ld hl, (ptrToGround1)
     inc hl
     ld (ptrToGround1), hl
+    
     ld hl, (ptrToGround2)
     inc hl    
     ld (ptrToGround2), hl
     
     ld bc,727
     ld de, (ptrToGround1)
-    call printGround 
+    call printGroundjustAbove
    
     ld bc, 760
     ld de, (ptrToGround2)
-    call printGround    
+    call printGroundBottom
     jp endMoveLemLeftRightEnd
     
 scrollGroundRight
     ld hl, (ptrToGround1)
     dec hl
     ld (ptrToGround1), hl
+    
     ld hl, (ptrToGround2)
     dec hl
     ld (ptrToGround2), hl
     
     ld bc,727
     ld de, (ptrToGround1)
-    call printGround 
+    call printGroundjustAbove 
    
     ld bc, 760
     ld de, (ptrToGround2)
-    call printGround
+    call printGroundBottom
     
 endMoveLemLeftRightEnd
     ret
@@ -852,7 +856,7 @@ printstring_end
     pop de  ; preserve de
     ret  
     
-printGround
+printGroundBottom  ; am duplicating code for now is eaiser to get the two end limits working for moonSurface1 and 2
     push bc
     push hl
     push de
@@ -862,15 +866,69 @@ printGround
     add hl,bc	
     ld b, 21
 printGround_loop
-    ld a,(de)        
+    ld a,(de)
+    cp $fe
+    jp z,resetPtrPrintGroundLeft    
+    cp $ff
+    jp z,resetPtrPrintGroundRight
     ld (hl),a
     inc hl
     inc de
     djnz printGround_loop
+    jp printGround_loopEND
+resetPtrPrintGroundLeft
+    ld hl, (ptrToGround2)
+    dec hl    
+    ld (ptrToGround2), hl
+    jp printGround_loopEND
+resetPtrPrintGroundRight
+    ld hl, (ptrToGround2)
+    inc hl    
+    ld (ptrToGround2), hl    
+    
+printGround_loopEND
     pop de
     pop hl        
     pop bc
     ret  
+    
+    
+printGroundjustAbove  ; am duplicating code for now is eaiser to get the two end limits working for moonSurface1 and 2
+    push bc
+    push hl
+    push de
+; print ground is different to print string, it has a specific loop count and starts from a pointer to 
+; a location within the ground memory so it can appear to scroll left or right (stored in bc)
+    ld hl,Display
+    add hl,bc	
+    ld b, 21
+printGround_loopJA
+    ld a,(de)
+    cp $fe
+    jp z,resetPtrPrintGroundLeftJA    
+    cp $ff
+    jp z,resetPtrPrintGroundRightJA
+    ld (hl),a
+    inc hl
+    inc de
+    djnz printGround_loopJA
+    jp printGround_loopENDJA
+resetPtrPrintGroundLeftJA
+    ld hl, (ptrToGround1)
+    dec hl    
+    ld (ptrToGround1), hl
+    jp printGround_loopENDJA
+resetPtrPrintGroundRightJA
+    ld hl, (ptrToGround1)
+    inc hl    
+    ld (ptrToGround1), hl    
+    
+printGround_loopENDJA
+    pop de
+    pop hl        
+    pop bc
+    ret  
+    
     
 print_number8bits
     ld hl, (DF_CC)    
@@ -1004,23 +1062,23 @@ ptrToGround1
 ptrToGround2
     DEFB   0,0
 moonSurface1
+    DEFB $ff,  0,136,  0,136,137,137,136,  0,  0,  0,  0, 0,  0,  0,  0,  0,136,  0,  0, 0,   0
     DEFB   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 0,  0,  0,  0,  0,  0,  0,  0,  0, 0
-    DEFB   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 0,  0,  0,  0,  0,  0,  0,  0,  0, 0
-    DEFB   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 0,  0,  0,  0,  0,  0,  0,  0,  0, 0
-    DEFB   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 0,  0,  0,  0,177,  0,  0,  0,177, 0     ; edges of landing zone 177
-    DEFB   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 0,  0,  0,  0,  0,  0,  0,  0,  0, 0     
-    DEFB   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 0,  0,  0,  0,  0,  0,  0,  0,  0, 0     
-    DEFB   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 0,  0,  0,  0,  0,  0,  0,  0,  0, 0
-    DEFB   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 0,  0,  0,  0,  0,  0,  0,  0,  0, 0    
+    DEFB   131,131,136,0,0,137,0,136,0,131,0,136,0,0,136,136,131,131,136,0,131
+    DEFB   0,  0,  0,  0,  0,  0,136,  0,  0,  0,  0, 0,  0,  0,  0,  0,  0,  0,  0,  0, 0     ; edges of landing zone 177
+    DEFB   131,131,136,136,137,137,136,136,131,131,136,136,137,137,136,136,131,131,136,136,131    
+    DEFB   0,131,  0,  0,131,  0,  0,  0,  0,  0,  0, 0,  0,  0,  0,  0,  0,  0,  0,  0, 0     
+    DEFB   131,  0,  0,  131,  131,  0,  131,  131,  131,  0,  0, 0,  0,  0,  0,  0,  0,  0,  0,  0, 0
+    DEFB   0,  0,  0,  0,  0,  0,136,  0,136,  0,  0, 0,  0,136,  0,  0,  0,  0,  0,  0, 0,$fe
 moonSurface2
-    DEFB 131,131,136,136,137,137,136,136,131,131,136,136,137,137,136,136,131,131,136,136,131
+    DEFB $ff,136,136,137,137,136,136,131,131,136,136,137,137,136,136,131,131,136,136,131
     DEFB 131,131,136,136,137,137,136,136,131,131,136,136,137,137,136,136,131,131,136,136,131    
     DEFB 131,131,136,136,137,137,136,136,131,131,136,136,137,137,136,136,131,131,136,136,131
     DEFB 128,129,131,131,136,136,137,137,136,136,136,  8,137,137,137,177,177,177,177,177,136  ; landing zone 177 (inverse L)
     DEFB 128,129,131,131,136,136,137,137,136,136,136,  8,137,137,137,128,129,131,131,136,136
     DEFB 131,131,136,136,137,137,136,136,131,131,136,136,137,137,136,136,131,131,136,136,131
     DEFB 131,131,136,136,137,137,136,136,131,131,136,136,137,137,136,136,131,131,136,136,131
-    DEFB 131,131,136,136,137,137,136,136,131,131,136,136,137,137,136,136,131,131,136,136,131    
+    DEFB 131,131,136,136,137,137,136,136,131,131,136,136,137,137,136,136,131,131,136,136,131,$fe
 everyOther
     DEFB 0
 VariablesEnd:   DEFB $80
