@@ -166,6 +166,10 @@ initVariables
     ld de, 69
     add hl, de
     ld (playerPosAbsolute), hl      ; this is the centre of the LEM (Lander) which is a 3 by 3 grid
+    ld hl, (DF_CC)
+    ld de, 207
+    add hl, de
+    ld (starPositionAbsolute), hl
     
     call drawLEM
       
@@ -607,10 +611,18 @@ mainEngineNotOn
     ret
 
 drawLEM         ;; on zx81 with blcok characters the LEM is a 3 by 3 grid, the hash defines are for each character 0 1 2 etc
-                ;; we could, and maybe will, just deine these in a small memory block and effectively do a mem copy
-
-
-    
+                ;; we could, and maybe will, just define these in a small memory block and effectively do a mem copy
+   
+    ld hl, (starPositionAbsolute)   ; print the stars first , they stationary play area, maybe they should move as well?!
+    ld a, 23   ; star/asterisk
+    ld (hl), a
+    ld de, 105
+    add hl, de
+    ld (hl), a
+    ld de, 233
+    sbc hl, de
+    ld (hl), a
+   
     ld hl, (playerPosAbsolute)      ; playerPosAbsolute is the top left of the lander    
     ld a, LEM_0
     ld (hl), a
@@ -653,7 +665,7 @@ rightThrustIsOn
     cp 0
     ld a, LEM_7_E_OFF    
     jp z, mainEngineIsOn
-    ;push hl
+    ;push hl        ;; did have rocket exhaust "effect" below LEM but it wasn't being erased reliably
     ;ld de, 33
     ;add hl, de    
     ;ld a, 8
@@ -667,6 +679,7 @@ mainEngineIsOn
     inc hl
     ld a, LEM_8
     ld (hl), a  
+       
     ret
 
 moveLemUp 
@@ -1086,6 +1099,9 @@ moonSurface2
     DEFB 131,131,136,136,137,137,136,136,131,131,136,136,137,137,136,136,131,131,136,136,131,$fe
 everyOther
     DEFB 0
+starPositionAbsolute
+    DEFB 0
+    
 VariablesEnd:   DEFB $80
 BasicEnd: 
 #END
