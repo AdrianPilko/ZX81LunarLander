@@ -331,7 +331,7 @@ updateStateAndDrawLEM
     ld a, (everyOther)
     inc a
     ld (everyOther), a
-    cp 3
+    cp 2
     jp z, doStuffEveryOther
     jp afterDoStuffEveryOther
 doStuffEveryOther
@@ -406,7 +406,7 @@ aftercheckCrash
     
 checkCrash
     ld a, (countSinceEngineOnPosi)
-    cp 4
+    cp 2
     jp nc, hitGroundGameOver    
     ld a, (x_velNeg)
     cp 0    
@@ -653,12 +653,12 @@ rightThrustIsOn
     cp 0
     ld a, LEM_7_E_OFF    
     jp z, mainEngineIsOn
-    push hl
-    ld de, 33
-    add hl, de    
-    ld a, 8
-    ld (hl), a
-    pop hl
+    ;push hl
+    ;ld de, 33
+    ;add hl, de    
+    ;ld a, 8
+    ;ld (hl), a
+    ;pop hl
     
     ld a, LEM_7_E_ON
 
