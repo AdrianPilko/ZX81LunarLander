@@ -203,9 +203,12 @@ initVariables
     ld a, 117
     ld (status_FuelQty), a    
     
-    ;; clear the lower 4 rows of play area, as may be "crash" debris
-    ld bc,628
+    ;; clear the lower 4 rows of play area, as may be "crash" debris    
+    
     ld de, clearRow
+    ld bc,595    
+    call printstring    
+    ld bc,628
     call printstring
     ld bc,661
     call printstring
@@ -408,7 +411,7 @@ checkCrash
     ld a, (x_velNeg)
     cp 0    
     jp nz, hitGroundGameOver
-    ld a, (x_velPosi)
+    ld a, (x_velPosi) 
     cp 0
     jp nz, hitGroundGameOver    
     ;ld a, (lemColPos)   
@@ -418,23 +421,21 @@ checkCrash
     jp hitGroundGameOver        
 
 hitGroundGameOver
-    ld hl, (playerPosAbsolute)
     ld a, 6
-    ld (hl), a
-    dec hl
-    ld (hl), a
-    inc hl
-    inc hl
-    ld (hl), a
-    inc hl
-    ld (hl), a
     ld hl, (playerPosAbsolute)
     ld de, 33
     sbc hl, de
     ld (hl), a    
     inc hl
-    inc hl    
+    ld (hl), a   
+    inc hl
     ld (hl), a
+    sbc hl, de
+    ld (hl), a
+    dec hl
+    ld (hl), a
+    dec hl
+    ld (hl), a   
     ld bc, 1
     ld de, youCrashedText    
     call printstring
