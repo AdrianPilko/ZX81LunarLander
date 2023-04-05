@@ -406,7 +406,7 @@ aftercheckCrash
     
 checkCrash
     ld a, (countSinceEngineOnPosi)
-    cp 2
+    cp 4
     jp nc, hitGroundGameOver    
     ld a, (x_velNeg)
     cp 0    
@@ -414,11 +414,15 @@ checkCrash
     ld a, (x_velPosi) 
     cp 0
     jp nz, hitGroundGameOver    
-    ;ld a, (lemColPos)   
-    ;cp 16           ; you have to land in the landing zone    
-    ;;;;;;;;;;;; TEMP DISABLE THIS NOW WE HAVE GROUND SCROLLING
+    
+    ld hl, (playerPosAbsolute)   ; check that have landed with L under centre of the LEM, ie landing zone
+    ld de, 100    
+    add hl, de
+    ld a, (hl)
+    cp 177
     jp z, playerWon
     jp hitGroundGameOver        
+    
 
 hitGroundGameOver
     ld a, 6
