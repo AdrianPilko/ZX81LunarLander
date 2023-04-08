@@ -207,8 +207,8 @@ initVariables
     ld a, 117
     ld (status_FuelQty), a    
     
-    ld a, 153    
-    ld (distanceToLandingZonePos), a
+    ld bc, $150    
+    ld (distanceToLandingZonePos), bc
     
     ;; clear the lower 4 rows of play area, as may be "crash" debris    
     
@@ -504,10 +504,15 @@ moveLemLeftRight
     cp 0
     jp z, checkMoveOtherWay
     ; move left
-    ld a, (distanceToLandingZonePos)    
-    inc a
+    ld bc, (distanceToLandingZonePos)    
+    inc bc
+    ld a, b
     daa
-    ld (distanceToLandingZonePos), a
+    ld b, a
+    ld a, c
+    daa
+    ld c, a
+    ld (distanceToLandingZonePos), bc
     
     ld a, (lemColPos)    
     cp 0
@@ -525,10 +530,15 @@ checkMoveOtherWay
     jp z, endMoveLemLeftRightEnd    
     ;; move lem right
     
-    ld a, (distanceToLandingZonePos)
-    dec a
+    ld bc, (distanceToLandingZonePos)    
+    dec bc
+    ld a, b
     daa
-    ld (distanceToLandingZonePos), a
+    ld b, a
+    ld a, c
+    daa
+    ld c, a
+    ld (distanceToLandingZonePos), bc
     
     ld a, (lemColPos)    
     cp 17
@@ -802,8 +812,8 @@ afterPrint
 
 
     ld de, 650
-    ld a, (distanceToLandingZonePos) ; stored as bcd
-    call print_number8bits 
+    ld bc, (distanceToLandingZonePos) ; stored as bcd    
+    call print_number16bits 
     
     ld de, 485
     ld a, (status_FuelQty) ; stored as bcd
@@ -983,7 +993,16 @@ printGround_loopENDJA
     pop hl        
     pop bc
     ret  
-    
+
+print_number16bits    ; bc stores the 16bits, print b then c
+    ld a, b
+    call print_number8bits
+    ld a, c
+    inc de  ; move de over by 2
+    inc de
+    call print_number8bits
+    ret
+
     
 print_number8bits
     ld hl, (DF_CC)    
@@ -1099,7 +1118,7 @@ agc_noun
 agc_verb   
     DEFB 0   
 distanceToLandingZonePos
-    DEFB 0  
+    DEFB 0, 0
 blankPartLine
     DEFB 0,0,0,0,0,0,0,0,0,$ff
     DEFB _F+128,_U+128,_E+128,_L+128,128,128,_L+128,_O+128,_W+128,$ff
