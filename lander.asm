@@ -180,10 +180,13 @@ initVariables
     ld (lemColPos), a
 
     ld a, 1
-    ld (firstTime), a
+    ld (firstTime), a    
+    ld a, 2
+    ld (fuelWarningFlash),a
     
-    xor a
+    xor a    
     ld (everyOther), a    
+    ld (fuelWarningLatch), a
     ld (countSinceEngineOnNeg), a
     ld (countSinceEngineOnPosi), a
     ld (leftThrustOn), a
@@ -204,7 +207,7 @@ initVariables
     ld a, 6
     ld (agc_verb), a
     
-    ld a, 117
+    ld a, 117    
     ld (status_FuelQty), a    
     
     ld bc, $150    
@@ -533,13 +536,18 @@ checkMoveOtherWay
     ld bc, (distanceToLandingZonePos)    
     dec bc
     ld a, b
+    or c        ; if b or c is zero then bc must be zero!
+    cp 0
+    jp z, noDecrementDistPos
+        
+    ld a, b
     daa
     ld b, a
     ld a, c
     daa
     ld c, a
     ld (distanceToLandingZonePos), bc
-    
+noDecrementDistPos
     ld a, (lemColPos)    
     cp 17
     jp z, scrollGroundLeft
@@ -811,7 +819,7 @@ inverseVideoPrintCA
 afterPrint    
 
 
-    ld de, 650
+    ld de, 649
     ld bc, (distanceToLandingZonePos) ; stored as bcd    
     call print_number16bits 
     
@@ -819,17 +827,39 @@ afterPrint
     ld a, (status_FuelQty) ; stored as bcd
     call print_number8bits 
     
+    ld a, (fuelWarningLatch)
+    cp 1
+    jp z, flashFuelWarning
     ld a, (status_FuelQty)
     ;;; flash a warning message if fuel low
     cp $15              ; this is bcd remember so hex 15 ($15) _is_ 15
     jp z, flashFuelWarning
     jp afterFlashFuelWarning
 flashFuelWarning
+    ld a, 1
+    ld (fuelWarningLatch), a
+    ld a, (fuelWarningFlash)    
+    dec a
+    ld (fuelWarningFlash), a
+    cp 0
+    jp z, printFuelWarningNormal   
+
+    ld de, fuelWarningTextNormal    
+    ld bc, 518
+    call printstring 
+    ld de, fuelWarningTextInverse
+    ld bc, 551
+    call printstring 
+    jp afterFlashFuelWarning
+printFuelWarningNormal    
+    ld a, 2
+    ld (fuelWarningFlash), a
+    ld de, fuelWarningTextNormal    
+    ld bc, 551
+    call printstring 
     ld de, fuelWarningTextInverse
     ld bc, 518
     call printstring 
-    ld bc, 551
-    call printstring     
     
 afterFlashFuelWarning    
     ld de, 291 
@@ -1055,8 +1085,8 @@ Display        	DEFB $76                                                  ;agc
                 DEFB 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,0,0,0,0,0,0,0,0,0,133,$76;Line15
                 DEFB 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,0,0,0,0,0,0,0,0,0,133,$76;Line16
                 DEFB 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,0,0,0,0,0,0,0,0,0,133,$76;Line17
-                DEFB 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,_D,_I,_S,_T,_A,_N,_C,_E, 0,133,$76;Line18
-                DEFB 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,0 ,_X,_X, 0, 0, 0, 0, 0, 0,133,$76;Line19
+                DEFB 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,_D,_I,_S,_T,__,_T,_O,_G,_O,133,$76;Line18
+                DEFB 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,_X,_X,_X,_X, 0, 0, 0, 0, 0,133,$76;Line19
                 DEFB 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,0,0,0,0,0,0,0,0,0,133,$76;Line20
                 DEFB 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,0,0,0,0,0,0,0,0,0,133,$76;Line21                
                 DEFB 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,0,0,0,0,0,0,0,0,0,133,$76;Line22
@@ -1124,6 +1154,12 @@ blankPartLine
     DEFB _F+128,_U+128,_E+128,_L+128,128,128,_L+128,_O+128,_W+128,$ff
 fuelWarningTextInverse    
     DEFB _F+128,_U+128,_E+128,_L+128,128,128,_L+128,_O+128,_W+128,$ff
+fuelWarningTextNormal
+    DEFB _F,_U,_E,_L,0,0,_L,_O,_W,$ff
+fuelWarningFlash
+    DEFB 0
+fuelWarningLatch
+    DEFB 0
 youCrashedText
     DEFB _Y,_O,_U,__,_C,_R,_A,_S,_H,_E,_D,__,__,__,__,__,__,__$ff     ; padding to overwrite the title
 goodLandingText
