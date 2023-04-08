@@ -206,8 +206,8 @@ initVariables
     
     ld a, 117
     ld (status_FuelQty), a    
-    ld a, 128
-    daa
+    
+    ld a, 153    
     ld (distanceToLandingZonePos), a
     
     ;; clear the lower 4 rows of play area, as may be "crash" debris    
@@ -504,6 +504,11 @@ moveLemLeftRight
     cp 0
     jp z, checkMoveOtherWay
     ; move left
+    ld a, (distanceToLandingZonePos)    
+    inc a
+    daa
+    ld (distanceToLandingZonePos), a
+    
     ld a, (lemColPos)    
     cp 0
     jp z, scrollGroundRight
@@ -513,16 +518,18 @@ moveLemLeftRight
     dec hl
     ld (playerPosAbsolute), hl    
     
-    ;ld a, (distanceToLandingZonePos)
-    ;inc a
-    ;daa        
-    ;ld (distanceToLandingZonePos), a
     
 checkMoveOtherWay    
     ld a, (x_velPosi)
     cp 0
     jp z, endMoveLemLeftRightEnd    
     ;; move lem right
+    
+    ld a, (distanceToLandingZonePos)
+    dec a
+    daa
+    ld (distanceToLandingZonePos), a
+    
     ld a, (lemColPos)    
     cp 17
     jp z, scrollGroundLeft
@@ -531,15 +538,11 @@ checkMoveOtherWay
     ld hl, (playerPosAbsolute)
     inc hl
     ld (playerPosAbsolute), hl
- 
-    ;ld a, (distanceToLandingZonePos)
-    ;dec a  
-    ; daa
-    ;ld (distanceToLandingZonePos), a    
     
     jp endMoveLemLeftRightEnd
 
-scrollGroundLeft
+scrollGroundLeft  
+    
     ld hl, (ptrToGround1)
     inc hl
     ld (ptrToGround1), hl
@@ -555,9 +558,12 @@ scrollGroundLeft
     ld bc, 760
     ld de, (ptrToGround2)
     call printGroundBottom
+        
+    
     jp endMoveLemLeftRightEnd
     
 scrollGroundRight
+    
     ld hl, (ptrToGround1)
     dec hl
     ld (ptrToGround1), hl
@@ -572,7 +578,7 @@ scrollGroundRight
    
     ld bc, 760
     ld de, (ptrToGround2)
-    call printGroundBottom
+    call printGroundBottom  
     
 endMoveLemLeftRightEnd
     ret
@@ -794,15 +800,14 @@ inverseVideoPrintCA
     call printstring       
 afterPrint    
 
-    ld de, 485
-    ld a, (status_FuelQty) ; stored as bcd
-    call print_number8bits 
 
     ld de, 650
     ld a, (distanceToLandingZonePos) ; stored as bcd
     call print_number8bits 
     
-    
+    ld de, 485
+    ld a, (status_FuelQty) ; stored as bcd
+    call print_number8bits 
     
     ld a, (status_FuelQty)
     ;;; flash a warning message if fuel low
@@ -1093,7 +1098,8 @@ agc_noun
     DEFB 0
 agc_verb   
     DEFB 0   
-;; for number conversion
+distanceToLandingZonePos
+    DEFB 0  
 blankPartLine
     DEFB 0,0,0,0,0,0,0,0,0,$ff
     DEFB _F+128,_U+128,_E+128,_L+128,128,128,_L+128,_O+128,_W+128,$ff
@@ -1137,9 +1143,7 @@ everyOther
     DEFB 0
 starPositionAbsolute
     DEFB 0
-distanceToLandingZonePos
-    DEFB 0
-    
+   
 VariablesEnd:   DEFB $80
 BasicEnd: 
 #END
