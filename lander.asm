@@ -834,6 +834,8 @@ afterPrint
     ;;; flash a warning message if fuel low
     cp $15              ; this is bcd remember so hex 15 ($15) _is_ 15
     jp z, flashFuelWarning
+    cp $14              ; this is bcd remember so hex 14 ($14) _is_ 14
+    jp z, flashFuelWarning    
     jp afterFlashFuelWarning
 flashFuelWarning
     ld a, 1

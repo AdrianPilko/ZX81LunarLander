@@ -9,5 +9,12 @@ call zxasm lander
 REM call will auto run emulator EightyOne if installed
 REM comment in or out usin rem which one to run
 
-call lander.p
+if exist lander.p (
+  call lander.p
+  exit
+) else (
+  pause
+)
+
+
 
