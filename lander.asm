@@ -48,6 +48,8 @@
 #define LEM_7_E_ON   137   ;; this is meant to be the descent engine when on 
 #define LEM_8   134       ;; lander right leg
 
+VSYNCLOOP       EQU      10
+
 ; character set definition/helpers
 __:				EQU	$00	;spacja
 _QT:			EQU	$0B	;"
@@ -249,7 +251,12 @@ gameLoop
     ld d, NON_FIRED
     ld e, 0
 
-    call eraseLEM
+	ld b,VSYNCLOOP
+waitForTVSync	
+	call vsync
+	djnz waitForTVSync
+
+    call eraseLEM    
     
     ;; read keys
     ld a, KEYBOARD_READ_PORT_SHIFT_TO_V			
@@ -409,7 +416,7 @@ afterCheckMoveLemUp
     jp z, checkCrash
     
 aftercheckCrash
-    call waitLoop
+    ;;call waitLoop
     jp gameLoop    
     
 checkCrash
@@ -1054,6 +1061,16 @@ print_number8bits
     ld (hl), a  
     
     ret
+
+;check if TV synchro (FRAMES) happend
+vsync	
+	ld a,(FRAMES)
+	ld c,a
+sync
+	ld a,(FRAMES)
+	cp c
+	jr z,sync
+	ret
 
     
                 DEFB $76                        ; Newline        
