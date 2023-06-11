@@ -48,7 +48,7 @@
 #define LEM_7_E_ON   137   ;; this is meant to be the descent engine when on 
 #define LEM_8   134       ;; lander right leg
 
-VSYNCLOOP       EQU      9
+VSYNCLOOP       EQU      5
 
 ; character set definition/helpers
 __:				EQU	$00	;spacja
