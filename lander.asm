@@ -172,15 +172,16 @@ initVariables
     ld de, 200
     add hl, de
     ld (starPositionAbsolute), hl
+ 
     
-    call drawLEM
+    call drawLEM    
       
     ld a, 1
     ld (lemRowPos), a
     inc a
     inc a
-    ld (lemColPos), a
-
+    ld (lemColPos), a 
+    
     ld a, 1
     ld (firstTime), a    
     ld a, 2
@@ -209,10 +210,10 @@ initVariables
     ld a, 6
     ld (agc_verb), a
     
-    ld a, 117    
+    ld a, 153    
     ld (status_FuelQty), a    
     
-    ld bc, $290    
+    ld bc, $299    
     ld (distanceToLandingZonePos), bc
     
     ld a, 128
@@ -262,45 +263,55 @@ waitForTVSync_prog64
     ;;call eraseLEM    
 
     
-   ;; ld a, 1         
-    ;;ld (leftThrustOn), a    ;; this is to change "sprite"        
-    ;;ld (x_velPosi), a       
+    ld a, 1
+    ld (x_velPosi), a       
 
     ;;call drawLEM
+    
+    ;;; display thrust from "braking thruster" on right of lem    
+    ld hl,Display
+    ld de, 106
+    add hl, de
+    ld a, LEM_5_THR_ON    
+    ld (hl), a
+    inc hl
+    ld (hl), a    
 
-    ;call scrollGroundLeft
+    call scrollGroundLeft
     
     ld a, 100
     ld (agc_program), a ; stored as bcd, so 64 is 100 in decimal
     
     
-    ; ld bc, (distanceToLandingZonePos)    
-    ; dec bc
-    ; ld a, b
-    ; or c        ; if b or c is zero then bc must be zero!
-    ; cp 0
-    ; jp z, noDecrementDistPos
-        
-    ; ld a, b
-    ; daa
-    ; ld b, a
-    ; ld a, c
-    ; daa
-    ; ld c, a
-    ; ld (distanceToLandingZonePos), bc
+    ld bc, (distanceToLandingZonePos)    
+    dec bc
+    ld a, b
+    or c        ; if b or c is zero then bc must be zero!
+    cp 0
+    jp z, noDecrementDistPos
+
+    ld a, b
+    daa
+    ld b, a
+    ld a, c
+    daa
+    ld c, a
+    ld (distanceToLandingZonePos), bc
     
     
     call updateAGC
+
+    ld a, (prog64Countdown)
+    ld de, 225       
+    call print_number8bits        
     
     ld a, (prog64Countdown)    
     dec a
+    daa
     cp 0
     jp z, gameLoop_main_prog66
     ld (prog64Countdown), a
         
-    ld de, 682
-    call print_number8bits 
-
     ld bc, 716
     ld de, prog64Text
     call printstring    
@@ -311,7 +322,8 @@ waitForTVSync_prog64
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 gameLoop_main_prog66    
-
+    ld a, 102
+    ld (agc_program), a ; stored as bcd, so 66 is 102 in decimal
     
     ld bc, 716
     ld de, prog66Text
@@ -1276,7 +1288,7 @@ moonSurface1
     DEFB 8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,
     DEFB 8,8,8,8,0,0,0,0,0,0,8,0,0,0,0,0,0,8,8,8,8
     DEFB 8,8,8,8,0,0,0,0,0,0,8,0,0,0,0,0,0,8,8,8,8
-    DEFB 8,8,8,8,8,8,0,8,8,8,0,  0,8,8,8,8,8,8,8,8,8        
+    DEFB 8,8,8,8,8,8,0,8,8,8,0,  0,8,8,8,8,8,8,8,8,       
     DEFB 0,0,0,0,0,0,0,0,0,0,8,8,0,8,0,8,8,0,8,0,8
     DEFB 8,0,8,8,0,8,0,8,0,0,0,8,8,8,8,0,0,8,8,132,8
     DEFB 8,8,8,8,0,0,0,0,0,0,8,0,0,0,0,0,0,8,8,8,8
