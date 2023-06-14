@@ -212,8 +212,11 @@ initVariables
     ld a, 117    
     ld (status_FuelQty), a    
     
-    ld bc, $145    
+    ld bc, $290    
     ld (distanceToLandingZonePos), bc
+    
+    ld a, 128
+    ld (prog64Countdown), a
     
     ;; clear the lower 4 rows of play area, as may be "crash" debris    
     
@@ -242,8 +245,78 @@ initVariables
     ld bc, 0   
     ld hl, 0   
     ld de, 0
+    
+gameLoop_main_prog_64    ; this is the initial game loop which is like agc program "64 LEM: LM Approach", but hands off like an intro to gam
+    ld a, (firstTime)
+    cp 0
+    jp z, initVariables
 
-gameLoop    
+    ld d, NON_FIRED
+    ld e, 0
+
+	ld b,VSYNCLOOP
+waitForTVSync_prog64	
+	call vsync
+	djnz waitForTVSync_prog64
+
+    ;;call eraseLEM    
+
+    
+   ;; ld a, 1         
+    ;;ld (leftThrustOn), a    ;; this is to change "sprite"        
+    ;;ld (x_velPosi), a       
+
+    ;;call drawLEM
+
+    ;call scrollGroundLeft
+    
+    ld a, 100
+    ld (agc_program), a ; stored as bcd, so 64 is 100 in decimal
+    
+    
+    ; ld bc, (distanceToLandingZonePos)    
+    ; dec bc
+    ; ld a, b
+    ; or c        ; if b or c is zero then bc must be zero!
+    ; cp 0
+    ; jp z, noDecrementDistPos
+        
+    ; ld a, b
+    ; daa
+    ; ld b, a
+    ; ld a, c
+    ; daa
+    ; ld c, a
+    ; ld (distanceToLandingZonePos), bc
+    
+    
+    call updateAGC
+    
+    ld a, (prog64Countdown)    
+    dec a
+    cp 0
+    jp z, gameLoop_main_prog66
+    ld (prog64Countdown), a
+        
+    ld de, 682
+    call print_number8bits 
+
+    ld bc, 716
+    ld de, prog64Text
+    call printstring    
+    
+    jp gameLoop_main_prog_64
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+gameLoop_main_prog66    
+
+    
+    ld bc, 716
+    ld de, prog66Text
+    call printstring
+    
     ld a, (firstTime)
     cp 0
     jp z, initVariables
@@ -417,7 +490,7 @@ afterCheckMoveLemUp
     
 aftercheckCrash
     ;;call waitLoop
-    jp gameLoop    
+    jp gameLoop_main_prog66    
     
 checkCrash
     ld a, (countSinceEngineOnPosi)
@@ -1185,6 +1258,10 @@ goodLandingText
     DEFB _G,_O,_O,_D,__,_L,_A,_N,_D,_I,_N,_G,__,14,22,17,17,__$ff  ; padding to overwrite the title
 titleText
     DEFB _L,_A,_N,_D,_E,_R,__,_S,_I,_M,_U,_L,_A,_T,_I,_O,_N,$ff
+prog64Text
+    DEFB _L,_M,0,_A,_P,_P,_R,_O,$ff
+prog66Text
+    DEFB _M,_A,_N,0,_L,_A,_N,_D,$ff
 clearRow    
     DEFB 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,$ff
 ptrToGround1
@@ -1193,6 +1270,14 @@ ptrToGround2
     DEFB   0,0
 moonSurface1
     DEFB $ff,0,0,0,0,0,0,0,0,0,8,8,0,8,0,8,8,0,8,0,8
+    DEFB 8,0,8,8,0,8,0,8,0,0,0,8,8,8,8,0,0,8,8,132,8
+    DEFB 8,8,8,8,0,0,0,0,0,0,8,0,0,0,0,0,0,8,8,8,8
+    DEFB 8,8,8,0,0,0,0,0,0,0,0,8,8,8,8,8,8,8,8,8,8        
+    DEFB 8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,
+    DEFB 8,8,8,8,0,0,0,0,0,0,8,0,0,0,0,0,0,8,8,8,8
+    DEFB 8,8,8,8,0,0,0,0,0,0,8,0,0,0,0,0,0,8,8,8,8
+    DEFB 8,8,8,8,8,8,0,8,8,8,0,  0,8,8,8,8,8,8,8,8,8        
+    DEFB 0,0,0,0,0,0,0,0,0,0,8,8,0,8,0,8,8,0,8,0,8
     DEFB 8,0,8,8,0,8,0,8,0,0,0,8,8,8,8,0,0,8,8,132,8
     DEFB 8,8,8,8,0,0,0,0,0,0,8,0,0,0,0,0,0,8,8,8,8
     DEFB 8,8,8,0,0,0,0,0,0,0,0,8,8,8,8,8,8,8,8,8,8        
@@ -1211,11 +1296,21 @@ moonSurface2
     DEFB 131,131,136,136,137,137,136,136,131,131,136,136,137,137,136,136,131,131,136,136,131
     DEFB 131,131,136,136,137,137,136,136,131,131,136,136,137,137,136,136,131,131,136,136,131    
     DEFB 128,129,131,131,136,136,137,137,136,136,136,  8,137,137,137,128,129,131,131,136,136        
+    DEFB 136,136,137,137,136,136,131,131,136,136,137,137,136,136,131,131,136,136,131,136
+    DEFB 136,136,137,137,136,136,131,131,136,136,137,137,136,136,131,131,136,136,131,132,131
+    DEFB 131,131,136,136,137,137,136,136,131,131,136,136,137,137,136,136,131,131,136,136,131
+    DEFB 131,131,136,136,137,137,136,136,131,131,136,136,137,137,136,136,131,131,136,136,131    
+    DEFB 131,131,8,8,8,8,8,8,131,131,136,136,137,137,136,136,131,131,136,136,131    
+    DEFB 131,131,136,136,137,137,136,136,131,131,136,136,137,137,136,136,131,131,136,136,131
+    DEFB 131,131,136,136,137,137,136,136,131,131,136,136,137,137,136,136,131,131,136,136,131    
+    DEFB 128,129,131,131,136,136,137,137,136,136,136,  8,137,137,137,128,129,131,131,136,136        
     DEFB 128,129,131,131,136,136,137,137,136,136,136,  8,137,137,137,177,177,177,177,177,136  ; landing zone 177 (inverse L)    
     DEFB 131,131,136,136,137,137,136,136,131,131,136,136,137,137,136,136,131,131,136,136,131,$fe
 everyOther
     DEFB 0
 starPositionAbsolute
+    DEFB 0
+prog64Countdown
     DEFB 0
    
 VariablesEnd:   DEFB $80
