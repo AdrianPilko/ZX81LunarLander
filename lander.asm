@@ -8,12 +8,6 @@
 #define         EQU  .equ
 #define         ORG  .org
 
-;; note if assembling with intension of running in an emulator the timings are different
-;; at least on my PAL TV zx81, it runs slower on real zx81, so comment in this #defines to 
-;; alter delay timings
-#define RUN_ON_EMULATOR
-
-
 ;;;;;#define DEBUG_NO_SCROLL
 
 ; keyboard port for shift key to v
@@ -152,8 +146,19 @@ UNUNSED2:       DEFW 0
 Line1:          DEFB $00,$0a                    ; Line 10
                 DEFW Line1End-Line1Text         ; Line 10 length
 Line1Text:      DEFB $ea                        ; REM
-        
+
+preinit
+    xor a
+    ld (scoreCrashes), a     
+    ld (scoreCrashes+1), a     
+    ld (scoreGoodLand), a    
+    ld (scoreGoodLand+1), a    
+    ld a, 1
+    ld (firstTime), a    
+    
 initVariables
+    
+
     ld de, blankPartLine
     ld bc, 518
     call printstring 
@@ -182,8 +187,6 @@ initVariables
     inc a
     ld (lemColPos), a 
     
-    ld a, 1
-    ld (firstTime), a    
     ld a, 2
     ld (fuelWarningFlash),a
     
@@ -241,6 +244,15 @@ initVariables
     ld (ptrToGround2), de
     call printGroundBottom
 
+    ld a, (scoreCrashes)
+    ld de, 753
+    call print_number8bits
+
+    ld a, (scoreGoodLand)
+    ld de, 749
+    call print_number8bits
+    
+
     ;;; zero registers
     xor a
     ld bc, 0   
@@ -250,7 +262,7 @@ initVariables
 gameLoop_main_prog_64    ; this is the initial game loop which is like agc program "64 LEM: LM Approach", but hands off like an intro to gam
     ld a, (firstTime)
     cp 0
-    jp z, initVariables
+    jp z, preinit
 
     ld d, NON_FIRED
     ld e, 0
@@ -260,13 +272,13 @@ waitForTVSync_prog64
 	call vsync
 	djnz waitForTVSync_prog64
 
-    ;;call eraseLEM    
+    ;call eraseLEM    
 
     
     ld a, 1
     ld (x_velPosi), a       
 
-    ;;call drawLEM
+    ;call drawLEM
     
     ;;; display thrust from "braking thruster" on right of lem    
     ld hl,Display
@@ -312,7 +324,7 @@ waitForTVSync_prog64
     jp z, gameLoop_main_prog66
     ld (prog64Countdown), a
         
-    ld bc, 716
+    ld bc, 683
     ld de, prog64Text
     call printstring    
     
@@ -325,13 +337,13 @@ gameLoop_main_prog66
     ld a, 102
     ld (agc_program), a ; stored as bcd, so 66 is 102 in decimal
     
-    ld bc, 716
+    ld bc, 683
     ld de, prog66Text
     call printstring
     
     ld a, (firstTime)
     cp 0
-    jp z, initVariables
+    jp z, preinit
 
     ld d, NON_FIRED
     ld e, 0
@@ -501,7 +513,6 @@ afterCheckMoveLemUp
     jp z, checkCrash
     
 aftercheckCrash
-    ;;call waitLoop
     jp gameLoop_main_prog66    
     
 checkCrash
@@ -543,15 +554,18 @@ hitGroundGameOver
     ld bc, 1
     ld de, youCrashedText    
     call printstring
+    
+    ld a, (scoreCrashes)
+    inc a
+    daa
+    ld (scoreCrashes), a
+    ld de, 753
+    call print_number8bits
+    
     call drawLEM
   
    
-#ifdef RUN_ON_EMULATOR
-    ld e, 20 
-#else
-    ld e, 15 
-#endif        
-    
+    ld e, 20     
 waitPlayerOver           
     call waitLoop   
     dec e
@@ -563,12 +577,17 @@ playerWon
     ld bc, 1
     ld de, goodLandingText
     call printstring    
+    
+    ld a, (scoreGoodLand)
+    inc a
+    daa
+    ld (scoreGoodLand), a
+    ld de, 749
+    call print_number8bits
+
     call drawLEM 
-#ifdef RUN_ON_EMULATOR
+
     ld e, 20 
-#else
-    ld e, 15 
-#endif       
 waitPlayerWon           
     call waitLoop   
     dec e
@@ -582,11 +601,7 @@ updateLEMPhysicsState
     ret
     
 waitLoop
-#ifdef RUN_ON_EMULATOR
     ld bc, $1aff     ; set wait loop delay for emulator
-#else
-    ld bc, $0eff     ; set wait loop delay 
-#endif    
 waitloop1
     dec bc
     ld a,b
@@ -911,7 +926,7 @@ inverseVideoPrintCA
 afterPrint    
 
 
-    ld de, 649
+    ld de, 651
     ld bc, (distanceToLandingZonePos) ; stored as bcd    
     call print_number16bits 
     
@@ -1171,7 +1186,7 @@ Line2End
 endBasic
                                                                 
 Display        	DEFB $76                                                  ;agc
-				DEFB _L,_A,_N,_D,_E,_R, ,_S,_I,_M,_U,_L,_A,_T,_I,_O,_N,0,0,0,0,7,3,3,3,3,3,3,3,3,3,132,$76  ;Line0
+				DEFB _L,_U,_N,_A,0,_L,_A,_N,_D,_E,_R,0,0,_B,_Y,0,_P,_I,_L,_K,_O,7,3,3,3,3,3,3,3,3,3,132,$76  ;Line0
                 DEFB 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,_C,_O,_M,_P,0,_P,_R,_O,_G,133,$76          ;Line1
                 DEFB 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,_A,_C,_T,_Y,0,0,_0,_0,0,133,$76            ;Line2
                 DEFB 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,_V,_E,_R,_B,0,_N,_O,_U,_N,133,$76          ;Line3
@@ -1184,16 +1199,16 @@ Display        	DEFB $76                                                  ;agc
                 DEFB 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,0,21,_0,_0,_0,_0,_0,0,0,133,$76            ;Line10
                 DEFB 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,3,3,3,3,3,3,3,3,3,133,$76;Line11
                 DEFB 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,0 , 0, 0, 0, 0, 0, 0, 0, 0,133,$76         ;Line12
-                DEFB 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,_F,_U,_E,_L, 0, 0, 0, 0, 0,133,$76         ;Line13
-                DEFB 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,0 ,_X,_X, 0, 0, 0, 0, 0, 0,133,$76;Line14
-                DEFB 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,0,0,0,0,0,0,0,0,0,133,$76;Line15
-                DEFB 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,0,0,0,0,0,0,0,0,0,133,$76;Line16
+                DEFB 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,_F,_U,_E,_L, 0, _C, _O, _M, _M,133,$76         ;Line13
+                DEFB 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,0 ,_X,_X, 0, 0, 0, _O, _K, 0,133,$76;Line14
+                DEFB 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,8,8,8,8,8,8,8,8,8,133,$76;Line15
+                DEFB 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,8,8,8,8,8,8,8,8,8,133,$76;Line16
                 DEFB 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,_E,_S,_T,_I,_M,_A,_T,_E,_D,133,$76;Line17
                 DEFB 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,_D,_I,_S,_T,__,_T,_O,_G,_O,133,$76;Line18
-                DEFB 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,_X,_X,_X,_X, 0, 0, 0, 0, 0,133,$76;Line19
+                DEFB 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,8,8,8,8,8,8,8,8,8,133,$76;Line19
                 DEFB 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,0,0,0,0,0,0,0,0,0,133,$76;Line20
-                DEFB 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,0,0,0,0,0,0,0,0,0,133,$76;Line21                
-                DEFB 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,0,0,0,0,0,0,0,0,0,133,$76;Line22
+                DEFB 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,_W,_I,_N,0,_C,_R,_A,_S,_H,133,$76;Line21                
+                DEFB 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,8,8,8,8,8,8,8,8,8,133,$76;Line22
                 DEFB 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,130,131,131,131,131,131,131,131,131,131,129,$76;Line23
 
                                                                
@@ -1254,7 +1269,7 @@ agc_verb
 distanceToLandingZonePos
     DEFB 0, 0
 blankPartLine
-    DEFB 0,0,0,0,0,0,0,0,0,$ff
+    DEFB 5,5,5,5,5,5,5,5,5,$ff
     DEFB _F+128,_U+128,_E+128,_L+128,128,128,_L+128,_O+128,_W+128,$ff
 fuelWarningTextInverse    
     DEFB _F+128,_U+128,_E+128,_L+128,128,128,_L+128,_O+128,_W+128,$ff
@@ -1265,15 +1280,15 @@ fuelWarningFlash
 fuelWarningLatch
     DEFB 0
 youCrashedText
-    DEFB _Y,_O,_U,__,_C,_R,_A,_S,_H,_E,_D,__,6,6,6,6,6,6$ff     ; padding to overwrite the title
+    DEFB _Y,_O,_U,__,_C,_R,_A,_S,_H,_E,_D,__,6,6,6,6,6,6,6,6,6,$ff     ; padding to overwrite the title
 goodLandingText
-    DEFB _G,_O,_O,_D,__,_L,_A,_N,_D,_I,_N,_G,__,14,22,17,17,__$ff  ; padding to overwrite the title
+    DEFB _G,_O,_O,_D,__,_L,_A,_N,_D,_I,_N,_G,__,14,22,17,17,0,0,0,0,$ff  ; padding to overwrite the title
 titleText
-    DEFB _L,_A,_N,_D,_E,_R,__,_S,_I,_M,_U,_L,_A,_T,_I,_O,_N,$ff
+    DEFB _L,_U,_N,_A,0,_L,_A,_N,_D,_E,_R,0,0,_B,_Y,0,_P,_I,_L,_K,_O,$ff
 prog64Text
-    DEFB _L,_M,0,_A,_P,_P,_R,_O,$ff
+    DEFB _L,_M,0,_A,_P,_P,_R,_O,_C,$ff
 prog66Text
-    DEFB _M,_A,_N,0,_L,_A,_N,_D,$ff
+    DEFB _M,_A,_N,0,_L,_A,_N,_D,_I,$ff
 clearRow    
     DEFB 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,$ff
 ptrToGround1
@@ -1324,6 +1339,10 @@ starPositionAbsolute
     DEFB 0
 prog64Countdown
     DEFB 0
+scoreCrashes
+    DEFB 0,0
+scoreGoodLand
+    DEFB 0,0
    
 VariablesEnd:   DEFB $80
 BasicEnd: 
