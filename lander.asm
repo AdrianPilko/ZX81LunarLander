@@ -164,6 +164,10 @@ initVariables
     call printstring 
     ld bc, 551
     call printstring     
+
+    ld de, commOKText
+    ld bc, 490
+    call printstring
     
     ld bc, 1
     ld de, titleText
@@ -561,6 +565,10 @@ hitGroundGameOver
     ld (scoreCrashes), a
     ld de, 753
     call print_number8bits
+    
+    ld de, commFailText
+    ld bc, 490
+    call printstring
     
     call drawLEM
   
@@ -1343,7 +1351,10 @@ scoreCrashes
     DEFB 0,0
 scoreGoodLand
     DEFB 0,0
-   
+commOKText
+    DEFB 0,_O,_K,0,$ff
+commFailText
+    DEFB _D,_E,_A,_D,$ff   
 VariablesEnd:   DEFB $80
 BasicEnd: 
 #END
