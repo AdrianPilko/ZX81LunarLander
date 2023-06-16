@@ -148,17 +148,15 @@ Line1:          DEFB $00,$0a                    ; Line 10
 Line1Text:      DEFB $ea                        ; REM
 
 preinit
+    ld a, 1  
+    ld (firstTime), a    
     xor a
     ld (scoreCrashes), a     
     ld (scoreCrashes+1), a     
     ld (scoreGoodLand), a    
     ld (scoreGoodLand+1), a    
-    ld a, 1
-    ld (firstTime), a    
     
 initVariables
-    
-
     ld de, blankPartLine
     ld bc, 518
     call printstring 
@@ -256,6 +254,7 @@ initVariables
     ld de, 749
     call print_number8bits
     
+    call printStarsAndStripesCLEAR
 
     ;;; zero registers
     xor a
@@ -593,6 +592,8 @@ playerWon
     ld de, 749
     call print_number8bits
 
+    call printStarsAndStripes
+    
     call drawLEM 
 
     ld e, 20 
@@ -1049,6 +1050,68 @@ displayZeroVelocity
 afterDisplayVelocity    
 
     ret
+    
+printStarsAndStripes
+    ld de, starsAndStripes
+    ld (tempStars), de    
+    ld de, 368              
+    ld (tempIndex), de
+    
+    ld b, 8
+starStripePrintLoop    
+    push bc
+    
+    ld de, (tempStars)
+    ld bc, (tempIndex)
+    
+    call printstring
+    
+    ;;; increment the index to both screen memory and the stars and stripes memory
+    ld hl, 13    ; the flag is 12 wide but we also have the $ff at then of the "line"
+    ld bc, (tempStars)
+    add hl, bc
+    ld (tempStars),hl
+
+    ld bc, (tempIndex)
+    ld hl, 33
+    add hl, bc
+    ld (tempIndex), hl
+    
+    pop bc
+    djnz starStripePrintLoop
+    ret
+    
+printStarsAndStripesCLEAR
+    ld de, starsAndStripesClear
+    ld (tempStars), de    
+    ld de, 368              
+    ld (tempIndex), de
+    
+    ld b, 8
+clearStarStripePrintLoop    
+    push bc
+    
+    ld de, (tempStars)
+    ld bc, (tempIndex)
+    
+    call printstring
+    
+    ;;; increment the index to both screen memory and the stars and stripes memory
+    ld hl, 13    ; the flag is 12 wide but we also have the $ff at then of the "line"
+    ld bc, (tempStars)
+    add hl, bc
+    ld (tempStars),hl
+
+    ld bc, (tempIndex)
+    ld hl, 33
+    add hl, bc
+    ld (tempIndex), hl
+    
+    pop bc
+    djnz clearStarStripePrintLoop
+    ret
+    
+    
 
         
 ; this prints at to any offset (stored in bc) from the top of the screen Display, using string in de
@@ -1303,6 +1366,38 @@ ptrToGround1
     DEFB   0,0
 ptrToGround2
     DEFB   0,0
+
+;starsAndStripes  ;; for testing position and draw loops, comment out later
+;    DEFB   28,29,30,31,32,33,34,35,36,37,38,39,$ff
+;    DEFB   40,41,42,43,44,45,46,47,48,49,50,51,$ff
+;    DEFB   0,0,0,0,0,0,0,0,0,0,0,0,$ff
+;    DEFB   0,0,0,0,0,0,0,0,0,0,0,0,$ff
+;    DEFB   0,0,0,0,0,0,0,0,0,0,0,0,$ff
+;    DEFB   0,0,0,0,0,0,0,0,0,0,0,0,$ff
+;    DEFB   0,0,0,0,0,0,0,0,0,0,0,0,$ff
+;    DEFB   0,0,0,0,0,0,0,0,0,28,29,30,$ff        
+starsAndStripes
+    DEFB   0,23,0,23,0,8,8,8,8,8,8,8,$ff
+    DEFB   23,0,23,0,23,0,0,0,0,0,0,0,$ff
+    DEFB   0,23,0,23,0,8,8,8,8,8,8,8,$ff
+    DEFB   23,0,23,0,23,0,0,0,0,0,0,0,$ff
+    DEFB   8,8,8,8,8,8,8,8,8,8,8,8,$ff
+    DEFB   0,0,0,0,0,0,0,0,0,0,0,0,$ff
+    DEFB   8,8,8,8,8,8,8,8,8,8,8,8,$ff
+    DEFB   0,0,0,0,0,0,0,0,0,0,0,0,$ff
+starsAndStripesClear
+    DEFB   0,0,0,0,0,0,0,0,0,0,0,0,$ff
+    DEFB   0,0,0,0,0,0,0,0,0,0,0,0,$ff
+    DEFB   0,0,0,0,0,0,0,0,0,0,0,0,$ff
+    DEFB   0,0,0,0,0,0,0,0,0,0,0,0,$ff
+    DEFB   0,0,0,0,0,0,0,0,0,0,0,0,$ff
+    DEFB   0,0,0,0,0,0,0,0,0,0,0,0,$ff
+    DEFB   0,0,0,0,0,0,0,0,0,0,0,0,$ff
+    DEFB   0,0,0,0,0,0,0,0,0,0,0,0,$ff    
+tempStars
+    DEFB 0,0
+tempIndex
+    DEFB 0,0
 moonSurface1
     DEFB $ff,0,0,0,0,0,0,0,0,0,8,8,0,8,0,8,8,0,8,0,8
     DEFB 8,0,8,8,0,8,0,8,0,0,0,8,8,8,8,0,0,8,8,132,8
