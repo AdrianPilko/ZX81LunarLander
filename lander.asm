@@ -43,6 +43,7 @@
 #define LEM_8   134       ;; lander right leg
 
 VSYNCLOOP       EQU      5
+VSYNCLOOPFASTATSTART       EQU      2
 
 ; character set definition/helpers
 __:				EQU	$00	;spacja
@@ -155,8 +156,21 @@ preinit
     ld (scoreCrashes+1), a     
     ld (scoreGoodLand), a    
     ld (scoreGoodLand+1), a    
+
+    call printInstructions
+    ld e, 20     
+waitBeofreStart           
+    call waitLoop   
+    dec e
+    jp nz, waitBeofreStart
+    
     
 initVariables
+    ld a, (firstTime)
+    cp 0
+    jp z, preinit
+    call printStarsAndStripesCLEAR    
+    
     ld de, blankPartLine
     ld bc, 518
     call printstring 
@@ -179,10 +193,28 @@ initVariables
     ld de, 200
     add hl, de
     ld (starPositionAbsolute), hl
- 
+
+
+    ld a, (firstTime)
+    cp 0
+    jp z, preinit
     
-    call drawLEM    
-      
+    
+    ld a, (scoreCrashes)
+    ld de, 753
+    call print_number8bits
+
+    ld a, (scoreGoodLand)
+    ld de, 749
+    call print_number8bits 
+
+    ld a, (firstTime)
+    cp 0
+    jp z, preinit
+        
+    call drawLEM       
+
+    
     ld a, 1
     ld (lemRowPos), a
     inc a
@@ -245,22 +277,16 @@ initVariables
     ld de, moonSurface2+40
     ld (ptrToGround2), de
     call printGroundBottom
-
-    ld a, (scoreCrashes)
-    ld de, 753
-    call print_number8bits
-
-    ld a, (scoreGoodLand)
-    ld de, 749
-    call print_number8bits
-    
-    call printStarsAndStripesCLEAR
-
+       
     ;;; zero registers
     xor a
     ld bc, 0   
     ld hl, 0   
     ld de, 0
+    
+    ld a, (firstTime)
+    cp 0
+    jp z, preinit
     
 gameLoop_main_prog_64    ; this is the initial game loop which is like agc program "64 LEM: LM Approach", but hands off like an intro to gam
     ld a, (firstTime)
@@ -270,7 +296,7 @@ gameLoop_main_prog_64    ; this is the initial game loop which is like agc progr
     ld d, NON_FIRED
     ld e, 0
 
-	ld b,VSYNCLOOP
+	ld b,VSYNCLOOPFASTATSTART
 waitForTVSync_prog64	
 	call vsync
 	djnz waitForTVSync_prog64
@@ -568,6 +594,8 @@ hitGroundGameOver
     ld de, commFailText
     ld bc, 490
     call printstring
+    
+    call printYouDiedAsHonorableHeros
     
     call drawLEM
   
@@ -1054,10 +1082,10 @@ afterDisplayVelocity
 printStarsAndStripes
     ld de, starsAndStripes
     ld (tempStars), de    
-    ld de, 368              
+    ld de, 69              
     ld (tempIndex), de
     
-    ld b, 8
+    ld b, 10       ;; this is how many rows there are
 starStripePrintLoop    
     push bc
     
@@ -1067,7 +1095,7 @@ starStripePrintLoop
     call printstring
     
     ;;; increment the index to both screen memory and the stars and stripes memory
-    ld hl, 13    ; the flag is 12 wide but we also have the $ff at then of the "line"
+    ld hl, 15    ; the flag is 12 wide but we also have the $ff at then of the "line"
     ld bc, (tempStars)
     add hl, bc
     ld (tempStars),hl
@@ -1080,14 +1108,74 @@ starStripePrintLoop
     pop bc
     djnz starStripePrintLoop
     ret
+
+printInstructions    
+    ld de, instructionsText
+    ld (tempStars), de    
+    ld de, 69              
+    ld (tempIndex), de
     
+    ld b, 10
+printInstructionsLoop    
+    push bc
+    
+    ld de, (tempStars)
+    ld bc, (tempIndex)
+    
+    call printstring
+    
+    ;;; increment the index to both screen memory and the stars and stripes memory
+    ld hl, 15    ; the flag is 12 wide but we also have the $ff at then of the "line"
+    ld bc, (tempStars)
+    add hl, bc
+    ld (tempStars),hl
+
+    ld bc, (tempIndex)
+    ld hl, 33
+    add hl, bc
+    ld (tempIndex), hl
+    
+    pop bc
+    djnz printInstructionsLoop
+    ret
+    
+printYouDiedAsHonorableHeros  
+    ld de, diedHerosText
+    ld (tempStars), de    
+    ld de, 69              
+    ld (tempIndex), de
+    
+    ld b, 10
+DiedAsHonorableHerosLoop    
+    push bc
+    
+    ld de, (tempStars)
+    ld bc, (tempIndex)
+    
+    call printstring
+    
+    ;;; increment the index to both screen memory and the stars and stripes memory
+    ld hl, 15    ; the flag is 12 wide but we also have the $ff at then of the "line"
+    ld bc, (tempStars)
+    add hl, bc
+    ld (tempStars),hl
+
+    ld bc, (tempIndex)
+    ld hl, 33
+    add hl, bc
+    ld (tempIndex), hl
+    
+    pop bc
+    djnz DiedAsHonorableHerosLoop
+    ret
+
 printStarsAndStripesCLEAR
     ld de, starsAndStripesClear
     ld (tempStars), de    
-    ld de, 368              
+    ld de, 69              
     ld (tempIndex), de
     
-    ld b, 8
+    ld b, 10
 clearStarStripePrintLoop    
     push bc
     
@@ -1097,7 +1185,7 @@ clearStarStripePrintLoop
     call printstring
     
     ;;; increment the index to both screen memory and the stars and stripes memory
-    ld hl, 13    ; the flag is 12 wide but we also have the $ff at then of the "line"
+    ld hl, 15    ; the flag is 12 wide but we also have the $ff at then of the "line"
     ld bc, (tempStars)
     add hl, bc
     ld (tempStars),hl
@@ -1355,7 +1443,7 @@ youCrashedText
 goodLandingText
     DEFB _G,_O,_O,_D,__,_L,_A,_N,_D,_I,_N,_G,__,14,22,17,17,0,0,0,0,$ff  ; padding to overwrite the title
 titleText
-    DEFB _L,_U,_N,_A,0,_L,_A,_N,_D,_E,_R,0,0,_B,_Y,0,_P,_I,_L,_K,_O,$ff
+    DEFB _L,_U,_N,_A,0,_L,_A,_N,_D,_E,_R,0,0,9,10,9,10,9,10,9,10,$ff
 prog64Text
     DEFB _L,_M,0,_A,_P,_P,_R,_O,_C,$ff
 prog66Text
@@ -1367,33 +1455,62 @@ ptrToGround1
 ptrToGround2
     DEFB   0,0
 
-;starsAndStripes  ;; for testing position and draw loops, comment out later
-;    DEFB   28,29,30,31,32,33,34,35,36,37,38,39,$ff
-;    DEFB   40,41,42,43,44,45,46,47,48,49,50,51,$ff
-;    DEFB   0,0,0,0,0,0,0,0,0,0,0,0,$ff
-;    DEFB   0,0,0,0,0,0,0,0,0,0,0,0,$ff
-;    DEFB   0,0,0,0,0,0,0,0,0,0,0,0,$ff
-;    DEFB   0,0,0,0,0,0,0,0,0,0,0,0,$ff
-;    DEFB   0,0,0,0,0,0,0,0,0,0,0,0,$ff
-;    DEFB   0,0,0,0,0,0,0,0,0,28,29,30,$ff        
+; starsAndStripes  ;; for testing position and draw loops, comment out later
+   ; DEFB   28,29,30,31,32,33,34,35,36,37,38,39,40,41,$ff
+   ; DEFB   42,43,44,45,46,47,48,49,50,51,52,53,54,55,$ff
+   ; DEFB   0,23,0,23,0,23,8,8,8,8,8,8,8,8,$ff
+   ; DEFB   23,0,23,0,23,0,0,0,0,0,0,0,0,0,$ff
+   ; DEFB   0,23,0,23,0,23,8,8,8,8,8,8,8,8,$ff
+   ; DEFB   23,0,23,0,23,0,0,0,0,0,0,0,0,8,$ff
+   ; DEFB   0,23,0,23,0,23,8,8,8,8,8,8,8,8,$ff
+   ; DEFB   0,0,0,0,0,0,0,0,0,0,0,0,0,0,$ff
+   ; DEFB   8,8,8,8,8,8,8,8,8,8,8,8,8,8,$ff
+   ; DEFB   0,0,0,0,0,0,0,0,0,0,0,40,41,42,$ff        
 starsAndStripes
-    DEFB   0,23,0,23,0,8,8,8,8,8,8,8,$ff
-    DEFB   23,0,23,0,23,0,0,0,0,0,0,0,$ff
-    DEFB   0,23,0,23,0,8,8,8,8,8,8,8,$ff
-    DEFB   23,0,23,0,23,0,0,0,0,0,0,0,$ff
-    DEFB   8,8,8,8,8,8,8,8,8,8,8,8,$ff
-    DEFB   0,0,0,0,0,0,0,0,0,0,0,0,$ff
-    DEFB   8,8,8,8,8,8,8,8,8,8,8,8,$ff
-    DEFB   0,0,0,0,0,0,0,0,0,0,0,0,$ff
+   DEFB   0,23,0,23,0,23,8,8,8,8,8,8,8,8,$ff
+   DEFB   23,0,23,0,23,0,0,0,0,0,0,0,0,0,$ff
+   DEFB   0,23,0,23,0,23,8,8,8,8,8,8,8,8,$ff
+   DEFB   23,0,23,0,23,0,0,0,0,0,0,0,0,0,$ff
+   DEFB   0,23,0,23,0,23,8,8,8,8,8,8,8,8,$ff
+   DEFB   0,0,0,0,0,0,0,0,0,0,0,0,0,0,$ff
+   DEFB   8,8,8,8,8,8,8,8,8,8,8,8,8,8,$ff
+   DEFB   0,0,0,0,0,0,0,0,0,0,0,0,0,0,$ff
+   DEFB   8,8,8,8,8,8,8,8,8,8,8,8,8,8,$ff
+   DEFB   0,0,0,0,0,0,0,0,0,0,0,0,0,0,$ff    
 starsAndStripesClear
-    DEFB   0,0,0,0,0,0,0,0,0,0,0,0,$ff
-    DEFB   0,0,0,0,0,0,0,0,0,0,0,0,$ff
-    DEFB   0,0,0,0,0,0,0,0,0,0,0,0,$ff
-    DEFB   0,0,0,0,0,0,0,0,0,0,0,0,$ff
-    DEFB   0,0,0,0,0,0,0,0,0,0,0,0,$ff
-    DEFB   0,0,0,0,0,0,0,0,0,0,0,0,$ff
-    DEFB   0,0,0,0,0,0,0,0,0,0,0,0,$ff
-    DEFB   0,0,0,0,0,0,0,0,0,0,0,0,$ff    
+    DEFB   0,0,0,0,0,0,0,0,0,0,0,0,0,0,$ff
+    DEFB   0,0,0,0,0,0,0,0,0,0,0,0,0,0,$ff
+    DEFB   0,0,0,0,0,0,0,0,0,0,0,0,0,0,$ff
+    DEFB   0,0,0,0,0,0,0,0,0,0,0,0,0,0,$ff
+    DEFB   0,0,0,0,0,0,0,0,0,0,0,0,0,0,$ff    
+    DEFB   0,0,0,0,0,0,0,0,0,0,0,0,0,0,$ff
+    DEFB   0,0,0,0,0,0,0,0,0,0,0,0,0,0,$ff
+    DEFB   0,0,0,0,0,0,0,0,0,0,0,0,0,0,$ff
+    DEFB   0,0,0,0,0,0,0,0,0,0,0,0,0,0,$ff
+    DEFB   0,0,0,0,0,0,0,0,0,0,0,0,0,0,$ff
+instructionsText
+    DEFB   _K,_E,_Y,_S,0,0,0,0,0,0,0,0,0,0,$ff
+    DEFB   0,_Z,0,_M,_O,_V,_E,0,_L,_E,_F,_T,0,0,$ff
+    DEFB   0,0,0,0,0,0,0,0,0,0,0,0,0,0,$ff    
+    DEFB   0,_M,0,_M,_O,_V,_E,0,_R,_I,_G,_H,_T,0,$ff
+    DEFB   0,0,0,0,0,0,0,0,0,0,0,0,0,0,$ff    
+    DEFB   0,_N,0,_F,_I,_R,_E,0,_M,_A,_I,_N,0,0,$ff
+    DEFB   0,0,0,0,0,0,0,0,_E,_N,_G,_I,_N,_E,$ff    
+    DEFB   0,0,0,0,0,0,0,0,0,0,0,0,0,0,$ff
+    DEFB   _B,_Y,0,_B,_Y,_T,_E,_F,_O,_R,_E,_V,_E,_R,$ff
+    DEFB   16,_A,0,_P,_I,_L,_K,_I,_N,_G,_T,_O,_N,17,$ff
+diedHerosText
+    DEFB   7,3,3,3,3,3,3,3,3,3,3,3,3,132,$ff
+    DEFB   5,_T,_H,_E,0,_C,_R,_E,_W,0,_D,_I,_D,133,$ff
+    DEFB   5,_N,_O,_T,0,_S,_U,_R,_V,_I,_V,_E,0,133,$ff
+    DEFB   5,134,134,134,134,134,134,134,134,134,134,134,134,133,$ff
+    DEFB   5,0,0,_R,_E,_S,_T,0,_I,_N,0,0,0,133,$ff    
+    DEFB   5,0,0,0,_P,_E,_A,_C,_E,0,0,0,0,133,$ff
+    DEFB   5,134,134,134,134,134,134,134,134,134,134,134,134,133,$ff
+    DEFB   5,_T,_H,_E,0,_N,_A,_T,_I,_O,_N,0,0,133,$ff
+    DEFB   5,_W,_I,_L,_L,0,_M,_O,_U,_R,_N,0,0,133,$ff
+    DEFB   5,_F,_A,_L,_L,_E,_N,0,_H,_E,_R,_O,_S,133,$ff    
+    DEFB   130,131,131,131,131,131,131,131,131,131,131,131,131,129,$ff    
 tempStars
     DEFB 0,0
 tempIndex
@@ -1443,9 +1560,9 @@ starPositionAbsolute
 prog64Countdown
     DEFB 0
 scoreCrashes
-    DEFB 0,0
+    DEFB 255,255
 scoreGoodLand
-    DEFB 0,0
+    DEFB 255,255
 commOKText
     DEFB 0,_O,_K,0,$ff
 commFailText
