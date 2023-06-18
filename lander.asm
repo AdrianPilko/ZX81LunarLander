@@ -298,10 +298,10 @@ initVariables
     ld bc,694
     call printstring
     
-    ; ld bc,727
-    ; ld de, moonSurface1+40
-    ; ld (ptrToGround1), de
-    ; call printGroundjustAbove   
+    ld bc,694
+    ld de, moonSurface0+40
+    ld (ptrToGround0), de
+    call printGroundSurface0
     
     ld bc,727
     ld de, moonSurface1+40
@@ -739,6 +739,10 @@ noDecrementDistPos
     jp endMoveLemLeftRightEnd
 
 scrollGroundLeft  
+
+    ld hl, (ptrToGround0)
+    inc hl
+    ld (ptrToGround0), hl
     
     ld hl, (ptrToGround1)
     inc hl
@@ -747,6 +751,10 @@ scrollGroundLeft
     ld hl, (ptrToGround2)
     inc hl    
     ld (ptrToGround2), hl
+    
+    ld bc,694
+    ld de, (ptrToGround0)
+    call printGroundSurface0    
     
     ld bc,727
     ld de, (ptrToGround1)
@@ -760,6 +768,11 @@ scrollGroundLeft
     jp endMoveLemLeftRightEnd
     
 scrollGroundRight
+
+
+    ld hl, (ptrToGround0)
+    dec hl
+    ld (ptrToGround0), hl
     
     ld hl, (ptrToGround1)
     dec hl
@@ -768,6 +781,11 @@ scrollGroundRight
     ld hl, (ptrToGround2)
     dec hl
     ld (ptrToGround2), hl
+    
+
+    ld bc,694
+    ld de, (ptrToGround0)
+    call printGroundSurface0
     
     ld bc,727
     ld de, (ptrToGround1)
@@ -1326,6 +1344,42 @@ printGround_loopENDJA
     pop hl        
     pop bc
     ret  
+    
+printGroundSurface0  ; am duplicating code for now is eaiser to get the two end limits working for moonSurface1 and 2
+    push bc
+    push hl
+    push de
+; print ground is different to print string, it has a specific loop count and starts from a pointer to 
+; a location within the ground memory so it can appear to scroll left or right (stored in bc)
+    ld hl,Display
+    add hl,bc	
+    ld b, 21
+printGround_loopSurface0
+    ld a,(de)
+    cp $fe
+    jp z,resetPtrPrintGroundLeftSurf0   
+    cp $ff
+    jp z,resetPtrPrintGroundRightSurf0
+    ld (hl),a
+    inc hl
+    inc de
+    djnz printGround_loopSurface0
+    jp printGround_loopENDSurface0
+resetPtrPrintGroundLeftSurf0
+    ld hl, (ptrToGround0)
+    dec hl    
+    ld (ptrToGround0), hl
+    jp printGround_loopENDSurface0
+resetPtrPrintGroundRightSurf0
+    ld hl, (ptrToGround1)
+    inc hl    
+    ld (ptrToGround0), hl    
+    
+printGround_loopENDSurface0
+    pop de
+    pop hl        
+    pop bc
+    ret      
 
 print_number16bits    ; bc stores the 16bits, print b then c
     ld a, b
@@ -1485,6 +1539,8 @@ prog66Text
     DEFB _M,_A,_N,0,_L,_A,_N,_D,_I,$ff
 clearRow    
     DEFB 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,$ff
+ptrToGround0
+    DEFB   0,0    
 ptrToGround1
     DEFB   0,0
 ptrToGround2
@@ -1554,6 +1610,28 @@ tempStars
     DEFB 0,0
 tempIndex
     DEFB 0,0
+    
+moonSurface0
+    DEFB $ff,0,0,0,0,0,0,0,0,0,8,8,0,8,0,8,8,0,8,0,8
+    DEFB 8,0,8,8,0,8,0,8,0,0,0,8,8,8,8,0,0,8,8,132,8
+    DEFB 0,0,0,0,0,0,0,0,0,0,8,0,0,0,0,0,0,8,8,8,8
+    DEFB 0,0,0,0,0,0,0,0,0,0,8,0,0,0,0,0,0,0,0,0,8
+    DEFB 0,0,0,0,0,0,0,0,0,0,8,0,0,0,0,0,0,0,0,0,8
+    DEFB 0,0,0,0,0,0,0,0,0,0,8,0,0,0,0,0,0,0,0,0,8
+    DEFB 0,0,0,0,0,0,0,0,0,0,8,0,0,0,0,0,0,0,0,0,8
+    DEFB 0,0,0,0,0,0,0,0,0,0,8,0,0,0,0,0,0,0,0,0,8
+    DEFB 0,0,0,0,0,0,0,0,0,0,8,0,0,0,0,0,0,0,0,0,8
+    DEFB 0,0,0,0,0,0,0,0,0,0,8,0,0,0,0,0,0,0,0,0,8
+    DEFB 0,0,0,0,0,0,0,0,0,0,8,132,0,145,0,0,0,0,0,0,8
+    DEFB 0,0,0,0,0,0,0,0,0,0,8,0,0,0,0,0,0,0,0,0,8
+    DEFB 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+    DEFB 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+    DEFB 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+    DEFB 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+    DEFB 8,8,8,0,0,0,0,0,0,0,0,  0,8,8,0,0,0,0,0,8,8  
+    DEFB 8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,
+    DEFB 8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,
+    DEFB 8,8,6,10,134,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,$fe
 moonSurface1
     DEFB $ff,0,0,0,0,0,0,0,0,0,8,8,0,8,0,8,8,0,8,0,8
     DEFB 8,0,8,8,0,8,0,8,0,0,0,8,8,8,8,0,0,8,8,132,8
@@ -1574,7 +1652,7 @@ moonSurface1
     DEFB 8,8,8,0,0,0,0,0,0,0,0,  0,8,8,8,0,0,0,0,0,8  
     DEFB 8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,
     DEFB 8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,
-    DEFB 8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,$fe
+    DEFB 8,8,8,144,8,145,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,$fe
 moonSurface2
     DEFB $ff,136,136,137,137,136,136,131,131,136,136,137,137,136,136,131,131,136,136,131,136
     DEFB 136,136,137,137,136,136,131,131,136,136,137,137,136,136,131,131,136,136,131,132,131
@@ -1593,9 +1671,9 @@ moonSurface2
     DEFB 131,131,136,136,137,137,136,136,131,131,136,136,137,137,136,136,131,131,136,136,131    
     DEFB 128,129,131,131,136,136,137,137,136,136,136,  8,137,137,137,128,129,131,131,136,136        
     DEFB 128,129,131,131,136,136,137,137,136,136,136,  8,137,137,137,177,177,177,177,177,136  ; landing zone 177 (inverse L)    
-    DEFB 131,131,136,136,137,137,136,136,131,131,136,136,137,137,136,136,131,131,136,136,131,
-    DEFB 131,131,136,136,137,137,136,136,131,_T,_H,_E,137,_E,_N,_D,131,_I,_S,136,_N,
-    DEFB _I,_G,_H,136,137,137,136,136,_C,_E,_R,_T,_A,_I,_N,136,_D,_E,_A,_T,_H,136,$fe    
+    DEFB 131,131,136,6,10,134,136,136,131,131,136,136,137,137,136,136,131,131,136,136,131,
+    DEFB 131,131,136,144,8,145,136,136,131,_T,_H,_E,137,_E,_N,_D,131,_I,_S,136,_N,
+    DEFB _I,_G,_H,6,3,134,136,136,_C,_E,_R,_T,_A,_I,_N,136,_D,_E,_A,_T,_H,136,$fe    
 everyOther
     DEFB 0
 starPositionAbsolute
