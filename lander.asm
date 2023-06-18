@@ -144,9 +144,15 @@ CDFLAG:         DEFB $40
 MEMBOT:         DEFB 0,0 ;  zeros
 UNUNSED2:       DEFW 0
 
+            ORG 16509       ;; we have to push the place in memory for this here becuase basic has 
+                    ;; to start at 16514 if memory was tight we could use the space between UNUSED2
+                    ;; and Line1 for variables
+
 Line1:          DEFB $00,$0a                    ; Line 10
                 DEFW Line1End-Line1Text         ; Line 10 length
 Line1Text:      DEFB $ea                        ; REM
+
+    
 
 preinit
     ld a, 1  
@@ -156,14 +162,38 @@ preinit
     ld (scoreCrashes+1), a     
     ld (scoreGoodLand), a    
     ld (scoreGoodLand+1), a    
-
-    call printInstructions
-    ld e, 20     
-waitBeofreStart           
-    call waitLoop   
-    dec e
-    jp nz, waitBeofreStart
     
+    call printInstructions        
+    
+    ld de, brakingBurnText
+    ld bc, 463
+    call printstring
+    
+    ld b, 30     
+    ld a, $30   ;; for bcd has to be in hex and "look like 30" to come out as 30 in bcd decimal
+    ld (brakingBurnCountDown), a
+waitBeofreStart  
+    push bc         
+    
+    call waitLoop       
+    
+    ld a, (brakingBurnCountDown)
+    dec a
+    daa
+    ld (brakingBurnCountDown), a
+    ld de, 507 
+    call print_number8bits    
+    
+    pop bc
+    djnz waitBeofreStart
+    
+    
+    ld de, clearBrakingBurnText
+    ld bc, 463
+    call printstring
+    ld de, clearBrakingBurnText
+    ld bc, 496
+    call printstring    
     
 initVariables
     ld a, (firstTime)
@@ -267,6 +297,11 @@ initVariables
     call printstring
     ld bc,694
     call printstring
+    
+    ; ld bc,727
+    ; ld de, moonSurface1+40
+    ; ld (ptrToGround1), de
+    ; call printGroundjustAbove   
     
     ld bc,727
     ld de, moonSurface1+40
@@ -793,28 +828,28 @@ mainEngineNotOn
 drawLEM         ;; on zx81 with blcok characters the LEM is a 3 by 3 grid, the hash defines are for each character 0 1 2 etc
                 ;; we could, and maybe will, just define these in a small memory block and effectively do a mem copy
    
-    ld hl, (starPositionAbsolute)   ; print the stars first , they stationary play area, maybe they should move as well?!
-    ld a, 23   ; star/asterisk
-    ld (hl), a
-    ld de, 112
-    add hl, de
-    ld (hl), a
-    ld de, 29
-    add hl, de    
-    ld (hl), a
+    ; ld hl, (starPositionAbsolute)   ; print the stars first , they stationary play area, maybe they should move as well?!
+    ; ld a, 23   ; star/asterisk
+    ; ld (hl), a
+    ; ld de, 112
+    ; add hl, de
+    ; ld (hl), a
+    ; ld de, 29
+    ; add hl, de    
+    ; ld (hl), a
 
-    ld de, 259
-    sbc hl, de    
-    ld (hl), a
-    ld de, 22
-    add hl, de    
-    ld (hl), a
-    ld de, 36
-    add hl, de    
-    ld (hl), a
-    ld de, 35
-    add hl, de    
-    ld (hl), a
+    ; ld de, 259
+    ; sbc hl, de    
+    ; ld (hl), a
+    ; ld de, 22
+    ; add hl, de    
+    ; ld (hl), a
+    ; ld de, 36
+    ; add hl, de    
+    ; ld (hl), a
+    ; ld de, 35
+    ; add hl, de    
+    ; ld (hl), a
     
    
     ld hl, (playerPosAbsolute)      ; playerPosAbsolute is the top left of the lander    
@@ -1345,18 +1380,18 @@ Line2End
 endBasic
                                                                 
 Display        	DEFB $76                                                  ;agc
-				DEFB _L,_U,_N,_A,0,_L,_A,_N,_D,_E,_R,0,0,_B,_Y,0,_P,_I,_L,_K,_O,7,3,3,3,3,3,3,3,3,3,132,$76  ;Line0
+				DEFB _L,_U,_N,_A,0,_L,_A,_N,_D,_E,_R,0,0,0,0,0,0,0,0,0,0,7,3,3,3,3,3,3,3,3,3,132,$76  ;Line0
                 DEFB 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,_C,_O,_M,_P,0,_P,_R,_O,_G,133,$76          ;Line1
                 DEFB 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,_A,_C,_T,_Y,0,0,_0,_0,0,133,$76            ;Line2
                 DEFB 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,_V,_E,_R,_B,0,_N,_O,_U,_N,133,$76          ;Line3
                 DEFB 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,0,_0,_0,0,0,0,_0,_0,0,133,$76              ;Line4
-                DEFB 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,3,3,3,3,3,3,3,3,3,133,$76;Line5
+                DEFB 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,7,3,3,3,3,3,3,3,3,3,132,$76;Line5
                 DEFB 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,0,21,_0,_0,_0,_0,_0,0,0,133,$76            ;Line6
-                DEFB 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,3,3,3,3,3,3,3,3,3,133,$76;Line7
+                DEFB 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,7,3,3,3,3,3,3,3,3,3,132,$76;Line7
                 DEFB 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,0,21,_0,_0,_0,_0,_0,0,0,133,$76            ;Line8
-                DEFB 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,3,3,3,3,3,3,3,3,3,133,$76$76;Line9
+                DEFB 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,7,3,3,3,3,3,3,3,3,3,132,$76$76;Line9
                 DEFB 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,0,21,_0,_0,_0,_0,_0,0,0,133,$76            ;Line10
-                DEFB 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,3,3,3,3,3,3,3,3,3,133,$76;Line11
+                DEFB 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,7,3,3,3,3,3,3,3,3,3,132,$76;Line11
                 DEFB 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,0 , 0, 0, 0, 0, 0, 0, 0, 0,133,$76         ;Line12
                 DEFB 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,_F,_U,_E,_L, 0, _C, _O, _M, _M,133,$76         ;Line13
                 DEFB 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,0 ,_X,_X, 0, 0, 0, _O, _K, 0,133,$76;Line14
@@ -1499,6 +1534,10 @@ instructionsText
     DEFB   0,0,0,0,0,0,0,0,0,0,0,0,0,0,$ff
     DEFB   _B,_Y,0,_B,_Y,_T,_E,_F,_O,_R,_E,_V,_E,_R,$ff
     DEFB   16,_A,0,_P,_I,_L,_K,_I,_N,_G,_T,_O,_N,17,$ff
+brakingBurnText 
+    DEFB _B,_R,_A,_K,_E,0,_B,_U,_R,_N,0,_C,_O,_U,_N,_T,_D,_O,_W,_N, $ff
+clearBrakingBurnText        
+    DEFB  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,$ff
 diedHerosText
     DEFB   7,3,3,3,3,3,3,3,3,3,3,3,3,132,$ff
     DEFB   5,_T,_H,_E,0,_C,_R,_E,_W,0,_D,_I,_D,133,$ff
@@ -1533,6 +1572,8 @@ moonSurface1
     DEFB 8,8,8,8,0,0,0,0,0,0,8,0,0,0,0,0,0,8,8,8,8
     DEFB 8,8,8,8,8,8,0,8,8,8,0,  0,8,8,8,8,8,8,8,8,8        
     DEFB 8,8,8,0,0,0,0,0,0,0,0,  0,8,8,8,0,0,0,0,0,8  
+    DEFB 8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,
+    DEFB 8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,
     DEFB 8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,$fe
 moonSurface2
     DEFB $ff,136,136,137,137,136,136,131,131,136,136,137,137,136,136,131,131,136,136,131,136
@@ -1552,7 +1593,9 @@ moonSurface2
     DEFB 131,131,136,136,137,137,136,136,131,131,136,136,137,137,136,136,131,131,136,136,131    
     DEFB 128,129,131,131,136,136,137,137,136,136,136,  8,137,137,137,128,129,131,131,136,136        
     DEFB 128,129,131,131,136,136,137,137,136,136,136,  8,137,137,137,177,177,177,177,177,136  ; landing zone 177 (inverse L)    
-    DEFB 131,131,136,136,137,137,136,136,131,131,136,136,137,137,136,136,131,131,136,136,131,$fe
+    DEFB 131,131,136,136,137,137,136,136,131,131,136,136,137,137,136,136,131,131,136,136,131,
+    DEFB 131,131,136,136,137,137,136,136,131,_T,_H,_E,137,_E,_N,_D,131,_I,_S,136,_N,
+    DEFB _I,_G,_H,136,137,137,136,136,_C,_E,_R,_T,_A,_I,_N,136,_D,_E,_A,_T,_H,136,$fe    
 everyOther
     DEFB 0
 starPositionAbsolute
@@ -1563,6 +1606,8 @@ scoreCrashes
     DEFB 255,255
 scoreGoodLand
     DEFB 255,255
+brakingBurnCountDown
+    DEFB 0
 commOKText
     DEFB 0,_O,_K,0,$ff
 commFailText
