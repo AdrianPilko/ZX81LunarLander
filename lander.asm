@@ -1,109 +1,97 @@
 ;;; Lunar lander game for zx81 
 ;;; by Adrian Pilkington 2023
 ;;; https://youtube.com/@byteforever7829
+;;; converted to pasmo syntax 2024
 
 ;some #defines for compatibility with other assemblers
-#define         DEFB .byte 
-#define         DEFW .word
-#define         EQU  .equ
-#define         ORG  .org
 
-;;;;;#define DEBUG_NO_SCROLL
+SCREEN_WIDTH equ 32
+SCREEN_HEIGHT equ 23   ; we can use the full screen becuase we're not using PRINT or PRINT AT ROM subroutines
 
-; keyboard port for shift key to v
-#define KEYBOARD_READ_PORT_SHIFT_TO_V $FE
-; keyboard space to b
-#define KEYBOARD_READ_PORT_SPACE_TO_B $7F 
-; starting port numbner for keyboard, is same as first port for shift to v
-#define KEYBOARD_READ_PORT $FE 
-#define SCREEN_WIDTH 32
-#define SCREEN_HEIGHT 23   ; we can use the full screen becuase we're not using PRINT or PRINT AT ROM subroutines
+NON_FIRED equ 0
+MAIN_ENGINE equ 1
+LEFT_THRUSTER equ 2
+RIGHT_THRUSTER equ 3
+GRAVITY equ 1
 
-#define NON_FIRED 0
-#define MAIN_ENGINE 1
-#define LEFT_THRUSTER 2
-#define RIGHT_THRUSTER 3
-#define GRAVITY 1
+LEM_0   equ 6
+LEM_1   equ 10       ; roof
+LEM_2   equ 134
 
-#define LEM_0   6
-#define LEM_1   10       ; roof
-#define LEM_2   134
+LEM_3_THR_OFF equ   144
+LEM_4  equ  8
+LEM_5_THR_OFF equ  145
 
-#define LEM_3_THR_OFF   144
-#define LEM_4   8
-#define LEM_5_THR_OFF  145
+LEM_3_THR_ON  equ  18
+LEM_5_THR_ON equ  19
 
-#define LEM_3_THR_ON   18
-#define LEM_4   8
-#define LEM_5_THR_ON  19
+LEM_6  equ  6       ;; lander left leg
+LEM_7_E_OFF equ   3   ;; this is meant to be the descent engine when off
+LEM_7_E_ON  equ  137   ;; this is meant to be the descent engine when on 
+LEM_8  equ  134       ;; lander right leg
 
-#define LEM_6   6       ;; lander left leg
-#define LEM_7_E_OFF   3   ;; this is meant to be the descent engine when off
-#define LEM_7_E_ON   137   ;; this is meant to be the descent engine when on 
-#define LEM_8   134       ;; lander right leg
-
-VSYNCLOOP       EQU      5
-VSYNCLOOPFASTATSTART       EQU      2
+VSYNCLOOP       equ       4
+VSYNCLOOPFASTATSTART    equ    2
 
 ; character set definition/helpers
-__:				EQU	$00	;spacja
-_QT:			EQU	$0B	;"
-_PD:			EQU	$0C	;funt 
-_SD:			EQU	$0D	;$
-_CL:			EQU	$0E	;:
-_QM:			EQU	$0F	;?
-_OP:			EQU	$10	;(
-_CP:			EQU	$11	;)
-_GT:			EQU	$12	;>
-_LT:			EQU	$13	;<
-_EQ:			EQU	$14	;=
-_PL:			EQU	$15	;+
-_MI:			EQU	$16	;-
-_AS:			EQU	$17	;*
-_SL:			EQU	$18	;/
-_SC:			EQU	$19	;;
-_CM:			EQU	$1A	;,
-_DT:			EQU	$1B	;.
-_NL:			EQU	$76	;NEWLINE
+__:				equ	$00	;spacja
+_QT:			equ	$0B	;"
+_PD:			equ	$0C	;funt 
+_SD:			equ	$0D	;$
+_CL:			equ	$0E	;:
+_QM:			equ	$0F	;?
+_OP:			equ	$10	;(
+_CP:			equ	$11	;)
+_GT:			equ	$12	;>
+_LT:			equ	$13	;<
+_EQ:			equ	$14	;=
+_PL:			equ	$15	;+
+_MI:			equ	$16	;-
+_AS:			equ	$17	;*
+_SL:			equ	$18	;/
+_SC:			equ	$19	;;
+_CM:			equ	$1A	;,
+_DT:			equ	$1B	;.
+_NL:			equ	$76	;NEWLINE
 
-_BL             EQU $80; solid block
+_BL             equ $80; solid block
 
-_0				EQU $1C
-_1				EQU $1D
-_2				EQU $1E
-_3				EQU $1F
-_4				EQU $20
-_5				EQU $21
-_6				EQU $22
-_7				EQU $23
-_8				EQU $24
-_9				EQU $25
-_A				EQU $26
-_B				EQU $27
-_C				EQU $28
-_D				EQU $29
-_E				EQU $2A
-_F				EQU $2B
-_G				EQU $2C
-_H				EQU $2D
-_I				EQU $2E
-_J				EQU $2F
-_K				EQU $30
-_L				EQU $31
-_M				EQU $32
-_N				EQU $33
-_O				EQU $34
-_P				EQU $35
-_Q				EQU $36
-_R				EQU $37
-_S				EQU $38
-_T				EQU $39
-_U				EQU $3A
-_V				EQU $3B
-_W				EQU $3C
-_X				EQU $3D
-_Y				EQU $3E
-_Z				EQU $3F
+_0				equ $1C
+_1				equ $1D
+_2				equ $1E
+_3				equ $1F
+_4				equ $20
+_5				equ $21
+_6				equ $22
+_7				equ $23
+_8				equ $24
+_9				equ $25
+_A				equ $26
+_B				equ $27
+_C				equ $28
+_D				equ $29
+_E				equ $2A
+_F				equ $2B
+_G				equ $2C
+_H				equ $2D
+_I				equ $2E
+_J				equ $2F
+_K				equ $30
+_L				equ $31
+_M				equ $32
+_N				equ $33
+_O				equ $34
+_P				equ $35
+_Q				equ $36
+_R				equ $37
+_S				equ $38
+_T				equ $39
+_U				equ $3A
+_V				equ $3B
+_W				equ $3C
+_X				equ $3D
+_Y				equ $3E
+_Z				equ $3F
 
 
 ;;;; this is the whole ZX81 runtime system and gets assembled and 
@@ -111,46 +99,46 @@ _Z				EQU $3F
 
            ORG  $4009             ; assemble to this address
                                                                 
-VERSN:          DEFB 0
-E_PPC:          DEFW 2
-D_FILE:         DEFW Display
-DF_CC:          DEFW Display+1                  ; First character of display
-VARS:           DEFW Variables
-DEST:           DEFW 0
-E_LINE:         DEFW BasicEnd 
-CH_ADD:         DEFW BasicEnd+4                 ; Simulate SAVE "X"
-X_PTR:          DEFW 0
-STKBOT:         DEFW BasicEnd+5
-STKEND:         DEFW BasicEnd+5                 ; Empty stack
-BREG:           DEFB 0
-MEM:            DEFW MEMBOT
-UNUSED1:        DEFB 0
-DF_SZ:          DEFB 2
-S_TOP:          DEFW $0002                      ; Top program line number
-LAST_K:         DEFW $fdbf
-DEBOUN:         DEFB 15
-MARGIN:         DEFB 55
-NXTLIN:         DEFW Line2                      ; Next line address
-OLDPPC:         DEFW 0
-FLAGX:          DEFB 0
-STRLEN:         DEFW 0
-T_ADDR:         DEFW $0c8d
-SEED:           DEFW 0
-FRAMES:         DEFW $f5a3
-COORDS:         DEFW 0
-PR_CC:          DEFB $bc
-S_POSN:         DEFW $1821
-CDFLAG:         DEFB $40
-MEMBOT:         DEFB 0,0 ;  zeros
-UNUNSED2:       DEFW 0
+VERSN:          db 0
+E_PPC:          dw 2
+D_FILE:         dw Display
+DF_CC:          dw Display+1                  ; First character of display
+VARS:           dw Variables
+DEST:           dw 0
+E_LINE:         dw BasicEnd 
+CH_ADD:         dw BasicEnd+4                 ; Simulate SAVE "X"
+X_PTR:          dw 0
+STKBOT:         dw BasicEnd+5
+STKEND:         dw BasicEnd+5                 ; Empty stack
+BREG:           db 0
+MEM:            dw MEMBOT
+UNUSED1:        db 0
+DF_SZ:          db 2
+S_TOP:          dw $0002                      ; Top program line number
+lastk:         dw $fdbf
+DEBOUN:         db 15
+MARGIN:         db 55
+NXTLIN:         dw Line2                      ; Next line address
+OLDPPC:         dw 0
+FLAGX:          db 0
+STRLEN:         dw 0
+T_ADDR:         dw $0c8d
+SEED:           dw 0
+FRAMES:         dw $f5a3
+COORDS:         dw 0
+PR_CC:          db $bc
+S_POSN:         dw $1821
+CDFLAG:         db $40
+MEMBOT:         db 0,0 ;  zeros
+UNUNSED2:       dw 0
 
             ORG 16509       ;; we have to push the place in memory for this here becuase basic has 
                     ;; to start at 16514 if memory was tight we could use the space between UNUSED2
                     ;; and Line1 for variables
 
-Line1:          DEFB $00,$0a                    ; Line 10
-                DEFW Line1End-Line1Text         ; Line 10 length
-Line1Text:      DEFB $ea                        ; REM
+Line1:          db $00,$0a                    ; Line 10
+                dw Line1End-Line1Text         ; Line 10 length
+Line1Text:      db $ea                        ; REM
 
     
 
@@ -420,22 +408,19 @@ waitForTVSync
     call eraseLEM    
     
     ;; read keys
-    ld a, KEYBOARD_READ_PORT_SHIFT_TO_V			
-    in a, (KEYBOARD_READ_PORT)					; read from io port	
-    bit 1, a                            ; Z
-    jp z, rightThruster
-
-    ld a, KEYBOARD_READ_PORT_SPACE_TO_B			
-    in a, (KEYBOARD_READ_PORT)					; read from io port		
-    bit 2, a						    ; N
+    call getKey			
+    cp 26                       ; O key
+    jp z, rightThruster         ; right thruster actually move the LEM left hence O key
+    cp 25                       ; P key
     jp z, leftThruster							    ; jump to move shape right	
     
 checkMainEngineKey
-    ld a, KEYBOARD_READ_PORT_SPACE_TO_B			
-    in a, (KEYBOARD_READ_PORT)					; read from io port		
-    bit 3, a					        ; M
+    call getKey	
+    cp 35                       ; SPACE key
     jp z, thrustMainEngine
-    
+    cp 1                        ; Z key  (using this as well as space as not easy on real zx81)
+    jp z, thrustMainEngine
+
     ld d, NON_FIRED
     ld e, 0
     jp updateStateAndDrawLEM
@@ -1410,6 +1395,16 @@ print_number8bits
     
     ret
 
+getKey
+    ;; changed to use the method of reading keys that uses the ROM routine $7bd
+    ;; then we test for the key number in a. ALso using more standard keys 
+    ;; (O, P left right, q and space are fire engine)
+    ld bc,(lastk)
+    ld a, c
+    inc a
+    call nz,$7bd
+    ret
+
 ;check if TV synchro (FRAMES) happend
 vsync	
 	ld a,(FRAMES)
@@ -1421,275 +1416,276 @@ sync
 	ret
 
     
-                DEFB $76                        ; Newline        
+                db $76                        ; Newline        
 Line1End
-Line2			DEFB $00,$14
-                DEFW Line2End-Line2Text
-Line2Text     	DEFB $F9,$D4                    ; RAND USR
-				DEFB $1D,$22,$21,$1D,$20        ; 16514                
-                DEFB $7E                        ; Number
-                DEFB $8F,$01,$04,$00,$00        ; Numeric encoding
-                DEFB $76                        ; Newline
+Line2			db $00,$14
+                dw Line2End-Line2Text
+Line2Text     	db $F9,$D4                    ; RAND USR
+				db $1D,$22,$21,$1D,$20        ; 16514                
+                db $7E                        ; Number
+                db $8F,$01,$04,$00,$00        ; Numeric encoding
+                db $76                        ; Newline
 Line2End            
 endBasic
                                                                 
-Display        	DEFB $76                                                  ;agc
-				DEFB _L,_U,_N,_A,0,_L,_A,_N,_D,_E,_R,0,0,0,0,0,0,0,0,0,0,7,3,3,3,3,3,3,3,3,3,132,$76  ;Line0
-                DEFB 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,_C,_O,_M,_P,0,_P,_R,_O,_G,133,$76          ;Line1
-                DEFB 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,_A,_C,_T,_Y,0,0,_0,_0,0,133,$76            ;Line2
-                DEFB 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,_V,_E,_R,_B,0,_N,_O,_U,_N,133,$76          ;Line3
-                DEFB 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,0,_0,_0,0,0,0,_0,_0,0,133,$76              ;Line4
-                DEFB 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,7,3,3,3,3,3,3,3,3,3,132,$76;Line5
-                DEFB 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,0,21,_0,_0,_0,_0,_0,0,0,133,$76            ;Line6
-                DEFB 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,7,3,3,3,3,3,3,3,3,3,132,$76;Line7
-                DEFB 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,0,21,_0,_0,_0,_0,_0,0,0,133,$76            ;Line8
-                DEFB 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,7,3,3,3,3,3,3,3,3,3,132,$76$76;Line9
-                DEFB 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,0,21,_0,_0,_0,_0,_0,0,0,133,$76            ;Line10
-                DEFB 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,7,3,3,3,3,3,3,3,3,3,132,$76;Line11
-                DEFB 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,0 , 0, 0, 0, 0, 0, 0, 0, 0,133,$76         ;Line12
-                DEFB 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,_F,_U,_E,_L, 0, _C, _O, _M, _M,133,$76         ;Line13
-                DEFB 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,0 ,_X,_X, 0, 0, 0, _O, _K, 0,133,$76;Line14
-                DEFB 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,8,8,8,8,8,8,8,8,8,133,$76;Line15
-                DEFB 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,8,8,8,8,8,8,8,8,8,133,$76;Line16
-                DEFB 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,_E,_S,_T,_I,_M,_A,_T,_E,_D,133,$76;Line17
-                DEFB 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,_D,_I,_S,_T,__,_T,_O,_G,_O,133,$76;Line18
-                DEFB 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,8,8,8,8,8,8,8,8,8,133,$76;Line19
-                DEFB 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,0,0,0,0,0,0,0,0,0,133,$76;Line20
-                DEFB 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,_W,_I,_N,0,_C,_R,_A,_S,_H,133,$76;Line21                
-                DEFB 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,8,8,8,8,8,8,8,8,8,133,$76;Line22
-                DEFB 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,130,131,131,131,131,131,131,131,131,131,129,$76;Line23
+Display        	db $76                                                  ;agc
+				db _L,_U,_N,_A,0,_L,_A,_N,_D,_E,_R,0,0,0,0,0,0,0,0,0,0,7,3,3,3,3,3,3,3,3,3,132,$76  ;Line0
+                db 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,_C,_O,_M,_P,0,_P,_R,_O,_G,133,$76          ;Line1
+                db 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,_A,_C,_T,_Y,0,0,_0,_0,0,133,$76            ;Line2
+                db 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,_V,_E,_R,_B,0,_N,_O,_U,_N,133,$76          ;Line3
+                db 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,0,_0,_0,0,0,0,_0,_0,0,133,$76              ;Line4
+                db 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,7,3,3,3,3,3,3,3,3,3,132,$76;Line5
+                db 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,0,21,_0,_0,_0,_0,_0,0,0,133,$76            ;Line6
+                db 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,7,3,3,3,3,3,3,3,3,3,132,$76;Line7
+                db 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,0,21,_0,_0,_0,_0,_0,0,0,133,$76            ;Line8
+                db 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,7,3,3,3,3,3,3,3,3,3,132,$76$76;Line9
+                db 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,0,21,_0,_0,_0,_0,_0,0,0,133,$76            ;Line10
+                db 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,7,3,3,3,3,3,3,3,3,3,132,$76;Line11
+                db 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,0 , 0, 0, 0, 0, 0, 0, 0, 0,133,$76         ;Line12
+                db 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,_F,_U,_E,_L, 0, _C, _O, _M, _M,133,$76         ;Line13
+                db 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,0 ,_X,_X, 0, 0, 0, _O, _K, 0,133,$76;Line14
+                db 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,8,8,8,8,8,8,8,8,8,133,$76;Line15
+                db 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,8,8,8,8,8,8,8,8,8,133,$76;Line16
+                db 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,_E,_S,_T,_I,_M,_A,_T,_E,_D,133,$76;Line17
+                db 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,_D,_I,_S,_T,__,_T,_O,_G,_O,133,$76;Line18
+                db 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,8,8,8,8,8,8,8,8,8,133,$76;Line19
+                db 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,0,0,0,0,0,0,0,0,0,133,$76;Line20
+                db 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,_W,_I,_N,0,_C,_R,_A,_S,_H,133,$76;Line21                
+                db 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,8,8,8,8,8,8,8,8,8,133,$76;Line22
+                db 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,130,131,131,131,131,131,131,131,131,131,129,$76;Line23
 
                                                                
 Variables:      
 inverseVidStrCApt1
-    DEFB	$a8,$b4,$b2,$b5,$ff    
+    db	$a8,$b4,$b2,$b5,$ff    
 inverseVidStrCApt2
-    DEFB	$a6,$a8,$b9,$be,$ff        
+    db	$a6,$a8,$b9,$be,$ff        
 noramlVidStrCApt1
-    DEFB    $28,$34,$32,$35,$ff
+    db    $28,$34,$32,$35,$ff
 noramlVidStrCApt2
-    DEFB    $26,$28,$39,$3e,$ff
+    db    $26,$28,$39,$3e,$ff
 tempChar
-    DEFB 0
+    db 0
 playerPosAbsolute
-    DEFB 0,0
+    db 0,0
 lemRowPos
-    DEFB 0
+    db 0
 lemColPos
-    DEFB 0  
+    db 0  
 pad1
-    DEFB 0    
+    db 0    
 firstTime    
-    DEFB 0
+    db 0
 pad2
-    DEFB 0        
+    db 0        
 leftThrustOn    
-    DEFB 0
+    db 0
 rightThrustOn    
-    DEFB 0
+    db 0
 mainEngineOn
-    DEFB 0
+    db 0
 status_FuelQty    
-    DEFB 0
+    db 0
 countSinceEngineOnPosi
-    DEFB 0   
+    db 0   
 countSinceEngineOnNeg    
-    DEFB 0
+    db 0
 ;;;;; LEM state
 x_velPosi
-    DEFB 0  
+    db 0  
 x_velNeg 
-    DEFB 0  
+    db 0  
 y_vel
-    DEFB 0
+    db 0
 y_vel_disp
-    DEFB 0
+    db 0
 altitude
-    DEFB 0
+    db 0
 agc_program
-    DEFB 0
+    db 0
 compActyEvenOdd
-    DEFB 0
+    db 0
 agc_noun
-    DEFB 0
+    db 0
 agc_verb   
-    DEFB 0   
+    db 0   
 distanceToLandingZonePos
-    DEFB 0, 0
+    db 0, 0
 blankPartLine
-    DEFB 5,5,5,5,5,5,5,5,5,$ff
-    DEFB _F+128,_U+128,_E+128,_L+128,128,128,_L+128,_O+128,_W+128,$ff
+    db 5,5,5,5,5,5,5,5,5,$ff
+    db _F+128,_U+128,_E+128,_L+128,128,128,_L+128,_O+128,_W+128,$ff
 fuelWarningTextInverse    
-    DEFB _F+128,_U+128,_E+128,_L+128,128,128,_L+128,_O+128,_W+128,$ff
+    db _F+128,_U+128,_E+128,_L+128,128,128,_L+128,_O+128,_W+128,$ff
 fuelWarningTextNormal
-    DEFB _F,_U,_E,_L,0,0,_L,_O,_W,$ff
+    db _F,_U,_E,_L,0,0,_L,_O,_W,$ff
 fuelWarningFlash
-    DEFB 0
+    db 0
 fuelWarningLatch
-    DEFB 0
+    db 0
 youCrashedText
-    DEFB _Y,_O,_U,__,_C,_R,_A,_S,_H,_E,_D,__,6,6,6,6,6,6,6,6,6,$ff     ; padding to overwrite the title
+    db _Y,_O,_U,__,_C,_R,_A,_S,_H,_E,_D,__,6,6,6,6,6,6,6,6,6,$ff     ; padding to overwrite the title
 goodLandingText
-    DEFB _G,_O,_O,_D,__,_L,_A,_N,_D,_I,_N,_G,__,14,22,17,17,0,0,0,0,$ff  ; padding to overwrite the title
+    db _G,_O,_O,_D,__,_L,_A,_N,_D,_I,_N,_G,__,14,22,17,17,0,0,0,0,$ff  ; padding to overwrite the title
 titleText
-    DEFB _L,_U,_N,_A,0,_L,_A,_N,_D,_E,_R,0,0,9,10,9,10,9,10,9,10,$ff
+    db _L,_U,_N,_A,0,_L,_A,_N,_D,_E,_R,0,0,9,10,9,10,9,10,9,10,$ff
 prog64Text
-    DEFB _L,_M,0,_A,_P,_P,_R,_O,_C,$ff
+    db _L,_M,0,_A,_P,_P,_R,_O,_C,$ff
 prog66Text
-    DEFB _M,_A,_N,0,_L,_A,_N,_D,_I,$ff
+    db _M,_A,_N,0,_L,_A,_N,_D,_I,$ff
 clearRow    
-    DEFB 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,$ff
+    db 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,$ff
 ptrToGround0
-    DEFB   0,0    
+    db   0,0    
 ptrToGround1
-    DEFB   0,0
+    db   0,0
 ptrToGround2
-    DEFB   0,0
+    db   0,0
 
 ; starsAndStripes  ;; for testing position and draw loops, comment out later
-   ; DEFB   28,29,30,31,32,33,34,35,36,37,38,39,40,41,$ff
-   ; DEFB   42,43,44,45,46,47,48,49,50,51,52,53,54,55,$ff
-   ; DEFB   0,23,0,23,0,23,8,8,8,8,8,8,8,8,$ff
-   ; DEFB   23,0,23,0,23,0,0,0,0,0,0,0,0,0,$ff
-   ; DEFB   0,23,0,23,0,23,8,8,8,8,8,8,8,8,$ff
-   ; DEFB   23,0,23,0,23,0,0,0,0,0,0,0,0,8,$ff
-   ; DEFB   0,23,0,23,0,23,8,8,8,8,8,8,8,8,$ff
-   ; DEFB   0,0,0,0,0,0,0,0,0,0,0,0,0,0,$ff
-   ; DEFB   8,8,8,8,8,8,8,8,8,8,8,8,8,8,$ff
-   ; DEFB   0,0,0,0,0,0,0,0,0,0,0,40,41,42,$ff        
+   ; db   28,29,30,31,32,33,34,35,36,37,38,39,40,41,$ff
+   ; db   42,43,44,45,46,47,48,49,50,51,52,53,54,55,$ff
+   ; db   0,23,0,23,0,23,8,8,8,8,8,8,8,8,$ff
+   ; db   23,0,23,0,23,0,0,0,0,0,0,0,0,0,$ff
+   ; db   0,23,0,23,0,23,8,8,8,8,8,8,8,8,$ff
+   ; db   23,0,23,0,23,0,0,0,0,0,0,0,0,8,$ff
+   ; db   0,23,0,23,0,23,8,8,8,8,8,8,8,8,$ff
+   ; db   0,0,0,0,0,0,0,0,0,0,0,0,0,0,$ff
+   ; db   8,8,8,8,8,8,8,8,8,8,8,8,8,8,$ff
+   ; db   0,0,0,0,0,0,0,0,0,0,0,40,41,42,$ff        
 starsAndStripes
-   DEFB   0,23,0,23,0,23,8,8,8,8,8,8,8,8,$ff
-   DEFB   23,0,23,0,23,0,0,0,0,0,0,0,0,0,$ff
-   DEFB   0,23,0,23,0,23,8,8,8,8,8,8,8,8,$ff
-   DEFB   23,0,23,0,23,0,0,0,0,0,0,0,0,0,$ff
-   DEFB   0,23,0,23,0,23,8,8,8,8,8,8,8,8,$ff
-   DEFB   0,0,0,0,0,0,0,0,0,0,0,0,0,0,$ff
-   DEFB   8,8,8,8,8,8,8,8,8,8,8,8,8,8,$ff
-   DEFB   0,0,0,0,0,0,0,0,0,0,0,0,0,0,$ff
-   DEFB   8,8,8,8,8,8,8,8,8,8,8,8,8,8,$ff
-   DEFB   0,0,0,0,0,0,0,0,0,0,0,0,0,0,$ff    
+   db   0,23,0,23,0,23,8,8,8,8,8,8,8,8,$ff
+   db   23,0,23,0,23,0,0,0,0,0,0,0,0,0,$ff
+   db   0,23,0,23,0,23,8,8,8,8,8,8,8,8,$ff
+   db   23,0,23,0,23,0,0,0,0,0,0,0,0,0,$ff
+   db   0,23,0,23,0,23,8,8,8,8,8,8,8,8,$ff
+   db   0,0,0,0,0,0,0,0,0,0,0,0,0,0,$ff
+   db   8,8,8,8,8,8,8,8,8,8,8,8,8,8,$ff
+   db   0,0,0,0,0,0,0,0,0,0,0,0,0,0,$ff
+   db   8,8,8,8,8,8,8,8,8,8,8,8,8,8,$ff
+   db   0,0,0,0,0,0,0,0,0,0,0,0,0,0,$ff    
 starsAndStripesClear
-    DEFB   0,0,0,0,0,0,0,0,0,0,0,0,0,0,$ff
-    DEFB   0,0,0,0,0,0,0,0,0,0,0,0,0,0,$ff
-    DEFB   0,0,0,0,0,0,0,0,0,0,0,0,0,0,$ff
-    DEFB   0,0,0,0,0,0,0,0,0,0,0,0,0,0,$ff
-    DEFB   0,0,0,0,0,0,0,0,0,0,0,0,0,0,$ff    
-    DEFB   0,0,0,0,0,0,0,0,0,0,0,0,0,0,$ff
-    DEFB   0,0,0,0,0,0,0,0,0,0,0,0,0,0,$ff
-    DEFB   0,0,0,0,0,0,0,0,0,0,0,0,0,0,$ff
-    DEFB   0,0,0,0,0,0,0,0,0,0,0,0,0,0,$ff
-    DEFB   0,0,0,0,0,0,0,0,0,0,0,0,0,0,$ff
+    db   0,0,0,0,0,0,0,0,0,0,0,0,0,0,$ff
+    db   0,0,0,0,0,0,0,0,0,0,0,0,0,0,$ff
+    db   0,0,0,0,0,0,0,0,0,0,0,0,0,0,$ff
+    db   0,0,0,0,0,0,0,0,0,0,0,0,0,0,$ff
+    db   0,0,0,0,0,0,0,0,0,0,0,0,0,0,$ff    
+    db   0,0,0,0,0,0,0,0,0,0,0,0,0,0,$ff
+    db   0,0,0,0,0,0,0,0,0,0,0,0,0,0,$ff
+    db   0,0,0,0,0,0,0,0,0,0,0,0,0,0,$ff
+    db   0,0,0,0,0,0,0,0,0,0,0,0,0,0,$ff
+    db   0,0,0,0,0,0,0,0,0,0,0,0,0,0,$ff
 instructionsText
-    DEFB   _K,_E,_Y,_S,0,0,0,0,0,0,0,0,0,0,$ff
-    DEFB   0,_Z,0,_M,_O,_V,_E,0,_L,_E,_F,_T,0,0,$ff
-    DEFB   0,0,0,0,0,0,0,0,0,0,0,0,0,0,$ff    
-    DEFB   0,_M,0,_M,_O,_V,_E,0,_R,_I,_G,_H,_T,0,$ff
-    DEFB   0,0,0,0,0,0,0,0,0,0,0,0,0,0,$ff    
-    DEFB   0,_N,0,_F,_I,_R,_E,0,_M,_A,_I,_N,0,0,$ff
-    DEFB   0,0,0,0,0,0,0,0,_E,_N,_G,_I,_N,_E,$ff    
-    DEFB   0,0,0,0,0,0,0,0,0,0,0,0,0,0,$ff
-    DEFB   _B,_Y,0,_B,_Y,_T,_E,_F,_O,_R,_E,_V,_E,_R,$ff
-    DEFB   16,_A,0,_P,_I,_L,_K,_I,_N,_G,_T,_O,_N,17,$ff
+    db   _K,_E,_Y,_S,0,0,0,0,0,0,0,0,0,0,$ff
+    db   0,_Z,0,_M,_O,_V,_E,0,_L,_E,_F,_T,0,0,$ff
+    db   0,0,0,0,0,0,0,0,0,0,0,0,0,0,$ff    
+    db   0,_M,0,_M,_O,_V,_E,0,_R,_I,_G,_H,_T,0,$ff
+    db   0,0,0,0,0,0,0,0,0,0,0,0,0,0,$ff    
+    db   0,_N,0,_F,_I,_R,_E,0,_M,_A,_I,_N,0,0,$ff
+    db   0,0,0,0,0,0,0,0,_E,_N,_G,_I,_N,_E,$ff    
+    db   0,0,0,0,0,0,0,0,0,0,0,0,0,0,$ff
+    db   _B,_Y,0,_B,_Y,_T,_E,_F,_O,_R,_E,_V,_E,_R,$ff
+    db   16,_A,0,_P,_I,_L,_K,_I,_N,_G,_T,_O,_N,17,$ff
 brakingBurnText 
-    DEFB _B,_R,_A,_K,_E,0,_B,_U,_R,_N,0,_C,_O,_U,_N,_T,_D,_O,_W,_N, $ff
+    db _B,_R,_A,_K,_E,0,_B,_U,_R,_N,0,_C,_O,_U,_N,_T,_D,_O,_W,_N, $ff
 clearBrakingBurnText        
-    DEFB  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,$ff
+    db  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,$ff
 diedHerosText
-    DEFB   7,3,3,3,3,3,3,3,3,3,3,3,3,132,$ff
-    DEFB   5,_T,_H,_E,0,_C,_R,_E,_W,0,_D,_I,_D,133,$ff
-    DEFB   5,_N,_O,_T,0,_S,_U,_R,_V,_I,_V,_E,0,133,$ff
-    DEFB   5,134,134,134,134,134,134,134,134,134,134,134,134,133,$ff
-    DEFB   5,0,0,_R,_E,_S,_T,0,_I,_N,0,0,0,133,$ff    
-    DEFB   5,0,0,0,_P,_E,_A,_C,_E,0,0,0,0,133,$ff
-    DEFB   5,134,134,134,134,134,134,134,134,134,134,134,134,133,$ff
-    DEFB   5,_T,_H,_E,0,_N,_A,_T,_I,_O,_N,0,0,133,$ff
-    DEFB   5,_W,_I,_L,_L,0,_M,_O,_U,_R,_N,0,0,133,$ff
-    DEFB   5,_F,_A,_L,_L,_E,_N,0,_H,_E,_R,_O,_S,133,$ff    
-    DEFB   130,131,131,131,131,131,131,131,131,131,131,131,131,129,$ff    
+    db   7,3,3,3,3,3,3,3,3,3,3,3,3,132,$ff
+    db   5,_T,_H,_E,0,_C,_R,_E,_W,0,_D,_I,_D,133,$ff
+    db   5,_N,_O,_T,0,_S,_U,_R,_V,_I,_V,_E,0,133,$ff
+    db   5,134,134,134,134,134,134,134,134,134,134,134,134,133,$ff
+    db   5,0,0,_R,_E,_S,_T,0,_I,_N,0,0,0,133,$ff    
+    db   5,0,0,0,_P,_E,_A,_C,_E,0,0,0,0,133,$ff
+    db   5,134,134,134,134,134,134,134,134,134,134,134,134,133,$ff
+    db   5,_T,_H,_E,0,_N,_A,_T,_I,_O,_N,0,0,133,$ff
+    db   5,_W,_I,_L,_L,0,_M,_O,_U,_R,_N,0,0,133,$ff
+    db   5,_F,_A,_L,_L,_E,_N,0,_H,_E,_R,_O,_S,133,$ff    
+    db   130,131,131,131,131,131,131,131,131,131,131,131,131,129,$ff    
 tempStars
-    DEFB 0,0
+    db 0,0
 tempIndex
-    DEFB 0,0
+    db 0,0
     
 moonSurface0
-    DEFB $ff,0,0,0,0,0,0,0,0,0,8,8,0,8,0,8,8,0,8,0,8
-    DEFB 8,0,8,8,0,8,0,8,0,0,0,8,8,8,8,0,0,8,8,132,8
-    DEFB 0,0,0,0,0,0,0,0,0,0,8,0,0,0,0,0,0,8,8,8,8
-    DEFB 0,0,0,0,0,0,0,0,0,0,8,0,0,0,0,0,0,0,0,0,8
-    DEFB 0,0,0,0,0,0,0,0,0,0,8,0,0,0,0,0,0,0,0,0,8
-    DEFB 0,0,0,0,0,0,0,0,0,0,8,0,0,0,0,0,0,0,0,0,8
-    DEFB 0,0,0,0,0,0,0,0,0,0,8,0,0,0,0,0,0,0,0,0,8
-    DEFB 0,0,0,0,0,0,0,0,0,0,8,0,0,0,0,0,0,0,0,0,8
-    DEFB 0,0,0,0,0,0,0,0,0,0,8,0,0,0,0,0,0,0,0,0,8
-    DEFB 0,0,0,0,0,0,0,0,0,0,8,0,0,0,0,0,0,0,0,0,8
-    DEFB 0,0,0,0,0,0,0,0,0,0,8,132,0,145,0,0,0,0,0,0,8
-    DEFB 0,0,0,0,0,0,0,0,0,0,8,0,0,0,0,0,0,0,0,0,8
-    DEFB 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-    DEFB 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-    DEFB 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-    DEFB 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-    DEFB 8,8,8,0,0,0,0,0,0,0,0,  0,8,8,0,0,0,0,0,8,8  
-    DEFB 8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,
-    DEFB 8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,
-    DEFB 8,8,6,10,134,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,$fe
+    db $ff,0,0,0,0,0,0,0,0,0,8,8,0,8,0,8,8,0,8,0,8
+    db 8,0,8,8,0,8,0,8,0,0,0,8,8,8,8,0,0,8,8,132,8
+    db 0,0,0,0,0,0,0,0,0,0,8,0,0,0,0,0,0,8,8,8,8
+    db 0,0,0,0,0,0,0,0,0,0,8,0,0,0,0,0,0,0,0,0,8
+    db 0,0,0,0,0,0,0,0,0,0,8,0,0,0,0,0,0,0,0,0,8
+    db 0,0,0,0,0,0,0,0,0,0,8,0,0,0,0,0,0,0,0,0,8
+    db 0,0,0,0,0,0,0,0,0,0,8,0,0,0,0,0,0,0,0,0,8
+    db 0,0,0,0,0,0,0,0,0,0,8,0,0,0,0,0,0,0,0,0,8
+    db 0,0,0,0,0,0,0,0,0,0,8,0,0,0,0,0,0,0,0,0,8
+    db 0,0,0,0,0,0,0,0,0,0,8,0,0,0,0,0,0,0,0,0,8
+    db 0,0,0,0,0,0,0,0,0,0,8,132,0,145,0,0,0,0,0,0,8
+    db 0,0,0,0,0,0,0,0,0,0,8,0,0,0,0,0,0,0,0,0,8
+    db 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+    db 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+    db 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+    db 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+    db 8,8,8,0,0,0,0,0,0,0,0,  0,8,8,0,0,0,0,0,8,8  
+    db 8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8
+    db 8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8
+    db 8,8,6,10,134,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,$fe
 moonSurface1
-    DEFB $ff,0,0,0,0,0,0,0,0,0,8,8,0,8,0,8,8,0,8,0,8
-    DEFB 8,0,8,8,0,8,0,8,0,0,0,8,8,8,8,0,0,8,8,132,8
-    DEFB 8,8,8,8,0,0,0,0,0,0,8,0,0,0,0,0,0,8,8,8,8
-    DEFB 8,8,8,0,0,0,0,0,0,0,0,8,8,8,8,8,8,8,8,8,8        
-    DEFB 8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,
-    DEFB 8,8,8,8,0,0,0,0,0,0,8,0,0,0,0,0,0,8,8,8,8
-    DEFB 8,8,8,8,0,0,0,0,0,0,8,0,0,0,0,0,0,8,8,8,8
-    DEFB 8,8,8,8,8,8,0,8,8,8,0,  0,8,8,8,8,8,8,8,8,       
-    DEFB 0,0,0,0,0,0,0,0,0,0,8,8,0,8,0,8,8,0,8,0,8
-    DEFB 8,0,8,8,0,8,0,8,0,0,0,8,8,8,8,0,0,8,8,132,8
-    DEFB 8,8,8,8,0,0,0,0,0,0,8,0,0,0,0,0,0,8,8,8,8
-    DEFB 8,8,8,0,0,0,0,0,0,0,0,8,8,8,8,8,8,8,8,8,8        
-    DEFB 8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,
-    DEFB 8,8,8,8,0,0,0,0,0,0,8,0,0,0,0,0,0,8,8,8,8
-    DEFB 8,8,8,8,0,0,0,0,0,0,8,0,0,0,0,0,0,8,8,8,8
-    DEFB 8,8,8,8,8,8,0,8,8,8,0,  0,8,8,8,8,8,8,8,8,8        
-    DEFB 8,8,8,0,0,0,0,0,0,0,0,  0,8,8,8,0,0,0,0,0,8  
-    DEFB 8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,
-    DEFB 8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,
-    DEFB 8,8,8,144,8,145,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,$fe
+    db $ff,0,0,0,0,0,0,0,0,0,8,8,0,8,0,8,8,0,8,0,8
+    db 8,0,8,8,0,8,0,8,0,0,0,8,8,8,8,0,0,8,8,132,8
+    db 8,8,8,8,0,0,0,0,0,0,8,0,0,0,0,0,0,8,8,8,8
+    db 8,8,8,0,0,0,0,0,0,0,0,8,8,8,8,8,8,8,8,8,8        
+    db 8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8
+    db 8,8,8,8,0,0,0,0,0,0,8,0,0,0,0,0,0,8,8,8,8
+    db 8,8,8,8,0,0,0,0,0,0,8,0,0,0,0,0,0,8,8,8,8
+    db 8,8,8,8,8,8,0,8,8,8,0,  0,8,8,8,8,8,8,8,8       
+    db 0,0,0,0,0,0,0,0,0,0,8,8,0,8,0,8,8,0,8,0,8
+    db 8,0,8,8,0,8,0,8,0,0,0,8,8,8,8,0,0,8,8,132,8
+    db 8,8,8,8,0,0,0,0,0,0,8,0,0,0,0,0,0,8,8,8,8
+    db 8,8,8,0,0,0,0,0,0,0,0,8,8,8,8,8,8,8,8,8,8        
+    db 8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8
+    db 8,8,8,8,0,0,0,0,0,0,8,0,0,0,0,0,0,8,8,8,8
+    db 8,8,8,8,0,0,0,0,0,0,8,0,0,0,0,0,0,8,8,8,8
+    db 8,8,8,8,8,8,0,8,8,8,0,  0,8,8,8,8,8,8,8,8,8        
+    db 8,8,8,0,0,0,0,0,0,0,0,  0,8,8,8,0,0,0,0,0,8  
+    db 8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8
+    db 8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8
+    db 8,8,8,144,8,145,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,$fe
 moonSurface2
-    DEFB $ff,136,136,137,137,136,136,131,131,136,136,137,137,136,136,131,131,136,136,131,136
-    DEFB 136,136,137,137,136,136,131,131,136,136,137,137,136,136,131,131,136,136,131,132,131
-    DEFB 131,131,136,136,137,137,136,136,131,131,136,136,137,137,136,136,131,131,136,136,131
-    DEFB 131,131,136,136,137,137,136,136,131,131,136,136,137,137,136,136,131,131,136,136,131    
-    DEFB 131,131,8,8,8,8,8,8,131,131,136,136,137,137,136,136,131,131,136,136,131    
-    DEFB 131,131,136,136,137,137,136,136,131,131,136,136,137,137,136,136,131,131,136,136,131
-    DEFB 131,131,136,136,137,137,136,136,131,131,136,136,137,137,136,136,131,131,136,136,131    
-    DEFB 128,129,131,131,136,136,137,137,136,136,136,  8,137,137,137,128,129,131,131,136,136        
-    DEFB 136,136,137,137,136,136,131,131,136,136,137,137,136,136,131,131,136,136,131,136
-    DEFB 136,136,137,137,136,136,131,131,136,136,137,137,136,136,131,131,136,136,131,132,131
-    DEFB 131,131,136,136,137,137,136,136,131,131,136,136,137,137,136,136,131,131,136,136,131
-    DEFB 131,131,136,136,137,137,136,136,131,131,136,136,137,137,136,136,131,131,136,136,131    
-    DEFB 131,131,8,8,8,8,8,8,131,131,136,136,137,137,136,136,131,131,136,136,131    
-    DEFB 131,131,136,136,137,137,136,136,131,131,136,136,137,137,136,136,131,131,136,136,131
-    DEFB 131,131,136,136,137,137,136,136,131,131,136,136,137,137,136,136,131,131,136,136,131    
-    DEFB 128,129,131,131,136,136,137,137,136,136,136,  8,137,137,137,128,129,131,131,136,136        
-    DEFB 128,129,131,131,136,136,137,137,136,136,136,  8,137,137,137,177,177,177,177,177,136  ; landing zone 177 (inverse L)    
-    DEFB 131,131,136,6,10,134,136,136,131,131,136,136,137,137,136,136,131,131,136,136,131,
-    DEFB 131,131,136,144,8,145,136,136,131,_T,_H,_E,137,_E,_N,_D,131,_I,_S,136,_N,
-    DEFB _I,_G,_H,6,3,134,136,136,_C,_E,_R,_T,_A,_I,_N,136,_D,_E,_A,_T,_H,136,$fe    
+    db $ff,136,136,137,137,136,136,131,131,136,136,137,137,136,136,131,131,136,136,131,136
+    db 136,136,137,137,136,136,131,131,136,136,137,137,136,136,131,131,136,136,131,132,131
+    db 131,131,136,136,137,137,136,136,131,131,136,136,137,137,136,136,131,131,136,136,131
+    db 131,131,136,136,137,137,136,136,131,131,136,136,137,137,136,136,131,131,136,136,131    
+    db 131,131,8,8,8,8,8,8,131,131,136,136,137,137,136,136,131,131,136,136,131    
+    db 131,131,136,136,137,137,136,136,131,131,136,136,137,137,136,136,131,131,136,136,131
+    db 131,131,136,136,137,137,136,136,131,131,136,136,137,137,136,136,131,131,136,136,131    
+    db 128,129,131,131,136,136,137,137,136,136,136,  8,137,137,137,128,129,131,131,136,136        
+    db 136,136,137,137,136,136,131,131,136,136,137,137,136,136,131,131,136,136,131,136
+    db 136,136,137,137,136,136,131,131,136,136,137,137,136,136,131,131,136,136,131,132,131
+    db 131,131,136,136,137,137,136,136,131,131,136,136,137,137,136,136,131,131,136,136,131
+    db 131,131,136,136,137,137,136,136,131,131,136,136,137,137,136,136,131,131,136,136,131    
+    db 131,131,8,8,8,8,8,8,131,131,136,136,137,137,136,136,131,131,136,136,131    
+    db 131,131,136,136,137,137,136,136,131,131,136,136,137,137,136,136,131,131,136,136,131
+    db 131,131,136,136,137,137,136,136,131,131,136,136,137,137,136,136,131,131,136,136,131    
+    db 128,129,131,131,136,136,137,137,136,136,136,  8,137,137,137,128,129,131,131,136,136        
+    db 128,129,131,131,136,136,137,137,136,136,136,  8,137,137,137,177,177,177,177,177,136  ; landing zone 177 (inverse L)    
+    db 131,131,136,6,10,134,136,136,131,131,136,136,137,137,136,136,131,131,136,136,131
+    db 131,131,136,144,8,145,136,136,131,_T,_H,_E,137,_E,_N,_D,131,_I,_S,136,_N
+    db _I,_G,_H,6,3,134,136,136,_C,_E,_R,_T,_A,_I,_N,136,_D,_E,_A,_T,_H,136,$fe    
 everyOther
-    DEFB 0
+    db 0
 starPositionAbsolute
-    DEFB 0
+    db 0
 prog64Countdown
-    DEFB 0
+    db 0
 scoreCrashes
-    DEFB 255,255
+    db 255,255
 scoreGoodLand
-    DEFB 255,255
+    db 255,255
 brakingBurnCountDown
-    DEFB 0
+    db 0
 commOKText
-    DEFB 0,_O,_K,0,$ff
+    db 0,_O,_K,0,$ff
 commFailText
-    DEFB _D,_E,_A,_D,$ff   
-VariablesEnd:   DEFB $80
+    db _D,_E,_A,_D,$ff   
+VariablesEnd:   db $80
 BasicEnd: 
-#END
+
+end
